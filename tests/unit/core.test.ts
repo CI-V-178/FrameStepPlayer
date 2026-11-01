@@ -1,16 +1,141 @@
-import {describe,it,expect,vi} from 'vitest';
-import {frameAt,frameTime,clampFrame,formatTime} from '../../src/shared/time';
-import {cleanText,validText,toVtt,fromVtt,memoName} from '../../src/features/memo/vtt';
-import {acceptedFps,detectFps} from '../../src/features/fps/detect';
-import {SaveQueue} from '../../src/features/memo/queue';
-import {readFile} from 'node:fs/promises';
-describe('フレーム計算',()=>{it('境界を補正する',()=>{expect(frameAt(1)).toBe(60);expect(frameAt(1-1e-6)).toBe(60);expect(frameAt(.01)).toBe(0);});it('中央と両端',()=>{expect(frameTime(1,10)).toBe(.025);expect(frameTime(-5,10)).toBe(.5/60);expect(frameTime(10000,10)).toBe(10-.5/60);expect(clampFrame(600,10)).toBe(599);expect(frameTime(0,0)).toBe(0);});});
-it('時刻は切り捨て',()=>{expect(formatTime(0)).toBe('00:00');expect(formatTime(65.99)).toBe('01:05');expect(formatTime(3601)).toBe('1:00:01');});
-it('コードポイントで50文字、改行と空白',()=>{expect(validText('😀'.repeat(50))).toBe(true);expect(validText('😀'.repeat(51))).toBe(false);expect(cleanText('😀'.repeat(51))).toBe('😀'.repeat(50));expect([...cleanText('e\u0301'.repeat(26))]).toHaveLength(50);expect(validText('   ')).toBe(false);expect(validText('a\nb')).toBe(false);});
-it('VTT往復、エスケープ、同一フレーム',()=>{const m=[{id:'a',frame:1200,text:'<&> -->'},{id:'b',frame:1200,text:'テスト'}];const v=toVtt(m);expect(v).toContain('00:00:20.000 --> 00:00:20.017');expect(v).toContain('&lt;&amp;&gt; →');expect(fromVtt(v).map(({frame,text})=>({frame,text}))).toEqual([{frame:1200,text:'<&> →'},{frame:1200,text:'テスト'}]);expect(memoName('test.mov')).toBe('test.memo.vtt');});
-it('IDなし・ID優先・壊れたキューをスキップ',()=>{const v='WEBVTT\n\n00:00:01.500 --> 00:00:01.517\nメモ\n\nf42\n00:00:09.000 --> 00:00:09.017\nID優先\n\nf1\ninvalid --> no\n壊れた\n\n00:00:03.000 --> 00:00:02.000\n逆転';expect(fromVtt(v).map(m=>m.frame)).toEqual([42,90]);});
-it.each([[59,true],[59.94,true],[60,true],[60.5,true],[29.97,false],[24,false],[60.51,false]])('fps範囲 %s', (fps,ok)=>{expect(acceptedFps(fps as number)).toBe(ok);});
-it.each(['f60.mp4','f60_moov_end.mp4','f30.mp4'])('mp4box解析 %s',async name=>{const b=await readFile('Example/MOCK/'+name);const reads:number[]=[];const fps=await detectFps(b.length,async(start,end)=>{reads.push(start);const s=b.subarray(start,end+1);return s.buffer.slice(s.byteOffset,s.byteOffset+s.byteLength) as ArrayBuffer;});expect(fps).toBeCloseTo(name==='f30.mp4'?30:60);if(name.includes('moov_end'))expect(reads.length).toBe(2);});
-it('解析できない動画を拒否',async()=>{await expect(detectFps(20,async()=>new ArrayBuffer(20))).rejects.toThrow('fps を判定できません');});
-it('保存をデバウンスし、同時実行せず最新変更を保持',async()=>{vi.useFakeTimers();const states:string[]=[];let finish:()=>void=()=>{};const save=vi.fn(()=>new Promise<void>(r=>{finish=r;}));const q=new SaveQueue(save,s=>states.push(s));q.put(1);q.put(2);await vi.advanceTimersByTimeAsync(1000);expect(save).toHaveBeenCalledExactlyOnceWith(2);q.put(3);await vi.advanceTimersByTimeAsync(1000);expect(save).toHaveBeenCalledTimes(1);finish();await Promise.resolve();expect(save).toHaveBeenCalledTimes(2);finish();await Promise.resolve();expect(q.dirty).toBe(false);expect(states.at(-1)).toBe('saved');q.dispose();vi.useRealTimers();});
-it('保存失敗後の再試行で変更を復元',async()=>{vi.useFakeTimers();const save=vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValue(undefined);const q=new SaveQueue(save,()=>{});q.put(5);await q.flush();expect(q.dirty).toBe(true);await q.flush();expect(q.dirty).toBe(false);expect(save).toHaveBeenLastCalledWith(5);q.dispose();vi.useRealTimers();});
+import { describe, it, expect, vi } from "vitest";
+import {
+  frameAt,
+  frameTime,
+  clampFrame,
+  formatTime,
+} from "../../src/shared/time";
+import {
+  cleanText,
+  validText,
+  toVtt,
+  fromVtt,
+  memoName,
+} from "../../src/features/memo/vtt";
+import { acceptedFps, detectFps } from "../../src/features/fps/detect";
+import { SaveQueue } from "../../src/features/memo/queue";
+import { readFile } from "node:fs/promises";
+describe("フレーム計算", () => {
+  it("境界を補正する", () => {
+    expect(frameAt(1)).toBe(60);
+    expect(frameAt(1 - 1e-6)).toBe(60);
+    expect(frameAt(0.01)).toBe(0);
+  });
+  it("中央と両端", () => {
+    expect(frameTime(1, 10)).toBe(0.025);
+    expect(frameTime(-5, 10)).toBe(0.5 / 60);
+    expect(frameTime(10000, 10)).toBe(10 - 0.5 / 60);
+    expect(clampFrame(600, 10)).toBe(599);
+    expect(frameTime(0, 0)).toBe(0);
+  });
+});
+it("時刻は切り捨て", () => {
+  expect(formatTime(0)).toBe("00:00");
+  expect(formatTime(65.99)).toBe("01:05");
+  expect(formatTime(3601)).toBe("1:00:01");
+});
+it("コードポイントで50文字、改行と空白", () => {
+  expect(validText("😀".repeat(50))).toBe(true);
+  expect(validText("😀".repeat(51))).toBe(false);
+  expect(cleanText("😀".repeat(51))).toBe("😀".repeat(50));
+  expect([...cleanText("e\u0301".repeat(26))]).toHaveLength(50);
+  expect(validText("   ")).toBe(false);
+  expect(validText("a\nb")).toBe(false);
+});
+it("VTT往復、エスケープ、同一フレーム", () => {
+  const m = [
+    { id: "a", frame: 1200, text: "<&> -->" },
+    { id: "b", frame: 1200, text: "テスト" },
+  ];
+  const v = toVtt(m);
+  expect(v).toContain("00:00:20.000 --> 00:00:20.017");
+  expect(v).toContain("&lt;&amp;&gt; →");
+  expect(fromVtt(v).map(({ frame, text }) => ({ frame, text }))).toEqual([
+    { frame: 1200, text: "<&> →" },
+    { frame: 1200, text: "テスト" },
+  ]);
+  expect(memoName("test.mov")).toBe("test.memo.vtt");
+});
+it("IDなし・ID優先・壊れたキューをスキップ", () => {
+  const v =
+    "WEBVTT\n\n00:00:01.500 --> 00:00:01.517\nメモ\n\nf42\n00:00:09.000 --> 00:00:09.017\nID優先\n\nf1\ninvalid --> no\n壊れた\n\n00:00:03.000 --> 00:00:02.000\n逆転";
+  expect(fromVtt(v).map((m) => m.frame)).toEqual([42, 90]);
+});
+it.each([
+  [59, true],
+  [59.94, true],
+  [60, true],
+  [60.5, true],
+  [29.97, false],
+  [24, false],
+  [60.51, false],
+])("fps範囲 %s", (fps, ok) => {
+  expect(acceptedFps(fps as number)).toBe(ok);
+});
+it.each(["f60.mp4", "f60_moov_end.mp4", "f30.mp4"])(
+  "mp4box解析 %s",
+  async (name) => {
+    const b = await readFile("Example/MOCK/" + name);
+    const reads: number[] = [];
+    const fps = await detectFps(b.length, async (start, end) => {
+      reads.push(start);
+      const s = b.subarray(start, end + 1);
+      return s.buffer.slice(
+        s.byteOffset,
+        s.byteOffset + s.byteLength,
+      ) as ArrayBuffer;
+    });
+    expect(fps).toBeCloseTo(name === "f30.mp4" ? 30 : 60);
+    if (name.includes("moov_end")) expect(reads.length).toBe(2);
+  },
+);
+it("解析できない動画を拒否", async () => {
+  await expect(detectFps(20, async () => new ArrayBuffer(20))).rejects.toThrow(
+    "fps を判定できません",
+  );
+});
+it("保存をデバウンスし、同時実行せず最新変更を保持", async () => {
+  vi.useFakeTimers();
+  const states: string[] = [];
+  let finish: () => void = () => {};
+  const save = vi.fn(
+    () =>
+      new Promise<void>((r) => {
+        finish = r;
+      }),
+  );
+  const q = new SaveQueue(save, (s) => states.push(s));
+  q.put(1);
+  q.put(2);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(save).toHaveBeenCalledExactlyOnceWith(2);
+  q.put(3);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(save).toHaveBeenCalledTimes(1);
+  finish();
+  await Promise.resolve();
+  expect(save).toHaveBeenCalledTimes(2);
+  const saved = q.flush();
+  finish();
+  await saved;
+  expect(q.dirty).toBe(false);
+  expect(states.at(-1)).toBe("saved");
+  q.dispose();
+  vi.useRealTimers();
+});
+it("保存失敗後の再試行で変更を復元", async () => {
+  vi.useFakeTimers();
+  const save = vi
+    .fn()
+    .mockRejectedValueOnce(new Error())
+    .mockResolvedValue(undefined);
+  const q = new SaveQueue(save, () => {});
+  q.put(5);
+  await q.flush();
+  expect(q.dirty).toBe(true);
+  await q.flush();
+  expect(q.dirty).toBe(false);
+  expect(save).toHaveBeenLastCalledWith(5);
+  q.dispose();
+  vi.useRealTimers();
+});

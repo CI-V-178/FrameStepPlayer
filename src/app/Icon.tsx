@@ -1,1 +1,32 @@
-export default function Icon({kind}:{kind:'folder'|'play'|'pause'|'close'|'film'}){return <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">{kind==='folder'?<path d="M3 7V5h6l2 2h10v13H3V7Z"/>:kind==='play'?<path d="m9 5 11 7-11 7Z"/>:kind==='pause'?<path d="M8 5v14M16 5v14"/>:kind==='close'?<path d="m6 6 12 12M18 6 6 18"/>:<><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 4v16M17 4v16M3 9h4m-4 6h4m10-6h4m-4 6h4"/></>}</svg>;}
+export default function Icon({
+  kind,
+}: {
+  kind: "folder" | "play" | "pause" | "close" | "film";
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      aria-hidden="true"
+    >
+      {kind === "folder" ? (
+        <path d="M3 7V5h6l2 2h10v13H3V7Z" />
+      ) : kind === "play" ? (
+        <path d="m9 5 11 7-11 7Z" />
+      ) : kind === "pause" ? (
+        <path d="M8 5v14M16 5v14" />
+      ) : kind === "close" ? (
+        <path d="m6 6 12 12M18 6 6 18" />
+      ) : (
+        <>
+          <rect x="3" y="4" width="18" height="16" rx="3" />
+          <path d="M7 4v16M17 4v16M3 9h4m-4 6h4m10-6h4m-4 6h4" />
+        </>
+      )}
+    </svg>
+  );
+}

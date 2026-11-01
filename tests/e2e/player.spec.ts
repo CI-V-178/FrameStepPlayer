@@ -1,38 +1,318 @@
-import {test,expect,type Page,type Route} from '@playwright/test';
-import {readFile,mkdir} from 'node:fs/promises';
-const mock='Example/MOCK/';
-const frame=(p:Page)=>p.evaluate(()=>window.__framestep!.getFrame());
-async function open(p:Page,name='f60.mp4'){await p.goto('/');await p.getByLabel('動画ファイル',{exact:true}).setInputFiles(mock+name);await expect(p.getByRole('button',{name:'再生',exact:true})).toBeEnabled();}
-async function key(p:Page,k:string,n:number){await p.locator('body').click({position:{x:2,y:2}});for(let i=0;i<n;i++){await p.keyboard.press(k);await p.waitForTimeout(180);}}
-async function note(p:Page,text:string){await p.getByLabel('メモ本文').fill(text);await p.getByRole('button',{name:'追加',exact:true}).click();}
-test('E1: 30fpsを拒否・不明な動画を拒否',async({page})=>{await page.goto('/');await page.getByLabel('動画ファイル',{exact:true}).setInputFiles(mock+'f30.mp4');await expect(page.getByRole('alert')).toContainText('60fps の動画のみ対応しています');await expect(page.locator('video')).toHaveCount(0);await page.getByLabel('動画ファイル',{exact:true}).setInputFiles({name:'broken.mp4',mimeType:'video/mp4',buffer:Buffer.from('broken')});await expect(page.getByRole('alert')).toContainText('fps を判定できません');});
-test('E2/E3: 正確に5f進んで3f戻る、入力中のキー操作を抑止',async({page})=>{await open(page);const start=await frame(page);await key(page,'.',5);expect(await frame(page)).toBe(start+5);await key(page,',',3);expect(await frame(page)).toBe(start+2);await page.getByLabel('メモ本文').focus();await page.keyboard.press('.');expect(await frame(page)).toBe(start+2);});
-test('E4/E5: 長押し・解除・端停止',async({page})=>{await open(page);const plus=page.getByRole('button',{name:'1フレーム進む'});const box=(await plus.boundingBox())!;await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(650);await expect(page.getByText('連続 ▶▶',{exact:true})).toBeVisible();await page.waitForTimeout(850);await page.mouse.up();const end=await frame(page);expect(end).toBeGreaterThanOrEqual(15);expect(end).toBeLessThanOrEqual(45);await page.waitForTimeout(400);expect(await frame(page)).toBe(end);await page.getByLabel('再生位置').fill('0');await page.waitForTimeout(200);const minus=(await page.getByRole('button',{name:'1フレーム戻る'}).boundingBox())!;await page.mouse.move(minus.x+20,minus.y+20);await page.mouse.down();await page.waitForTimeout(900);expect(await frame(page)).toBe(0);await expect(page.locator('.hold-badge')).toHaveCount(0);await page.mouse.up();});
-test('E6: メモジャンプ・時刻順・削除・端末保存',async({page})=>{await open(page);await key(page,'.',5);const f=await frame(page);await note(page,'テスト');await key(page,'.',3);await note(page,'次のメモ');await page.getByRole('button',{name:'[00:00] テスト',exact:true}).click();expect(await frame(page)).toBe(f);expect(await page.locator('video').evaluate(v=>v.paused)).toBe(true);await expect(page.getByText('端末に保存済み',{exact:true})).toBeVisible();await page.reload();await page.getByLabel('動画ファイル',{exact:true}).setInputFiles(mock+'f60.mp4');await expect(page.locator('.memo-row')).toHaveCount(2);await page.getByRole('button',{name:'メモを削除：テスト',exact:true}).click();await expect(page.locator('.memo-row')).toHaveCount(1);});
-test('E7: コードポイント50文字まで入力',async({page})=>{await open(page);await page.getByLabel('メモ本文').fill('😀'.repeat(51));await expect(page.getByLabel('メモ本文')).toHaveValue('😀'.repeat(50));await expect(page.getByText('50/50',{exact:true})).toBeVisible();});
-test('E8: VTT書き出し・再読み込み',async({page})=>{await open(page);await note(page,'テスト<&>');await key(page,'.',4);await note(page,'ふたつめ');const before=await page.locator('.memo-jump').allTextContents();const download=page.waitForEvent('download');await page.getByRole('button',{name:'.vtt を書き出す',exact:true}).click();const d=await download;expect(d.suggestedFilename()).toBe('f60.memo.vtt');await page.getByLabel('VTTファイル',{exact:true}).setInputFiles((await d.path())!);expect(await page.locator('.memo-jump').allTextContents()).toEqual(before);});
-test('E9: moov末尾のfps解析',async({page})=>{await open(page,'f60_moov_end.mp4');await expect(page.getByRole('alert')).toHaveCount(0);});
-test('再生・Space・シーク・M',async({page})=>{await open(page);await key(page,' ',1);await expect(page.getByRole('button',{name:'一時停止',exact:true})).toBeEnabled();await page.waitForTimeout(250);expect(await frame(page)).toBeGreaterThan(0);await key(page,' ',1);await expect(page.getByRole('button',{name:'再生',exact:true})).toBeEnabled();await page.getByLabel('再生位置').fill('3');await expect.poll(()=>frame(page)).toBe(180);await key(page,'m',1);await expect(page.getByLabel('メモ本文')).toBeFocused();});
-async function driveMock(page:Page,fallback=false,existing=false,failPatch=false){
- const bytes=await readFile(mock+'f60.mp4'),requests:{method:string;url:string;body:string}[]=[];let created=false,patchFailed=false;
- await page.route('https://www.googleapis.com/**',async(route:Route)=>{
- const r=route.request(),u=new URL(r.url()),method=r.method(),body=r.postData()||'';requests.push({method,url:r.url(),body});
- const json=(data:unknown,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
- if(u.searchParams.get('alt')==='media'){
- if(u.pathname.endsWith('/memo-existing'))return route.fulfill({contentType:'text/vtt',body:'WEBVTT\n\nf120\n00:00:02.000 --> 00:00:02.017\n既存メモ'});
- const range=r.headers()['range'];if(range){const m=/bytes=(\d+)-(\d*)/.exec(range)!;const start=Number(m[1]),end=Math.min(Number(m[2]||bytes.length-1),bytes.length-1);return route.fulfill({status:206,headers:{'Content-Type':'video/mp4','Content-Range':'bytes '+start+'-'+end+'/'+bytes.length,'Accept-Ranges':'bytes'},body:bytes.subarray(start,end+1)});}return route.fulfill({contentType:'video/mp4',body:bytes});
- }
- if(method==='GET'&&u.pathname.endsWith('/video-1'))return json({id:'video-1',name:'sample.mp4',size:String(bytes.length),mimeType:'video/mp4',parents:['parent-1']});
- if(method==='GET'&&u.pathname.endsWith('/files'))return json({files:existing&&u.searchParams.get('q')?.includes('framestepVideoId')?[{id:'memo-existing',name:'sample.memo.vtt'}]:[]});
- if(method==='POST'&&body.includes('application/vnd.google-apps.folder'))return json({id:'folder-1'});
- if(method==='POST'&&u.searchParams.get('uploadType')==='multipart'){if(fallback&&!body.includes('folder-1'))return json({error:{}},403);created=true;return json({id:'memo-1'});}
- if(method==='PATCH'){if(failPatch&&!patchFailed){patchFailed=true;return json({error:{}},500);}return json({id:'memo-1'});}
- return json({unexpected:r.url()},404);
- });
- await page.goto('/');await page.evaluate(()=>window.__framestep!.openDrive({fileId:'video-1',token:'mock-token'}));await expect(page.getByRole('button',{name:'再生',exact:true})).toBeEnabled();
- return {requests,get created(){return created;}};
+import { test, expect, type Page, type Route } from "@playwright/test";
+import { readFile, mkdir } from "node:fs/promises";
+const mock = "Example/MOCK/";
+const frame = (p: Page) => p.evaluate(() => window.__framestep!.getFrame());
+async function open(p: Page, name = "f60.mp4") {
+  await p.goto("/");
+  await p
+    .getByLabel("動画ファイル", { exact: true })
+    .setInputFiles(mock + name);
+  await expect(
+    p.getByRole("button", { name: "再生", exact: true }),
+  ).toBeEnabled();
 }
-test('E10: Drive再生、multipartとPATCH、メタデータ',async({page})=>{const mock=await driveMock(page);await note(page,'Driveテスト');await expect.poll(()=>mock.created).toBe(true);const create=mock.requests.find(r=>r.method==='POST')!;expect(create.body).toContain('"parents":["parent-1"]');expect(create.body).toContain('"framestepVideoId":"video-1"');expect(create.body).toContain('"name":"sample.memo.vtt"');expect(create.body).toContain('WEBVTT');await note(page,'更新');await expect.poll(()=>mock.requests.filter(r=>r.method==='PATCH').length).toBe(1);await expect(page.getByText('Drive に保存済み',{exact:true})).toBeVisible();});
-test('E10: 403で代替フォルダへ保存、セッション内で再利用',async({page})=>{const mock=await driveMock(page,true);await note(page,'代替');await expect.poll(()=>mock.created).toBe(true);expect(mock.requests.some(r=>r.body.includes('FrameStep メモ'))).toBe(true);expect(mock.requests.some(r=>r.body.includes('"parents":["folder-1"]'))).toBe(true);});
-test('E10: 既存VTT読込・保存失敗後の再試行',async({page})=>{const mock=await driveMock(page,false,true,true);await expect(page.getByRole('button',{name:'[00:02] 既存メモ',exact:true})).toBeVisible();await note(page,'変更');await expect(page.getByRole('alert')).toContainText('メモの保存に失敗');await page.getByRole('button',{name:'保存に失敗しました［再試行］'}).click();await expect(page.getByText('Drive に保存済み',{exact:true})).toBeVisible();expect(mock.requests.filter(r=>r.method==='PATCH')).toHaveLength(2);});
-test('E11: 390×844と1280×800、横スクロールなし',async({page},info)=>{await open(page);await note(page,'テイクバック開始');await page.getByLabel('再生位置').fill('3');await page.waitForTimeout(200);await note(page,'インパクトの位置');await mkdir('docs/screenshots',{recursive:true});for(const [width,height]of [[390,844],[1280,800]]){await page.setViewportSize({width,height});await page.waitForTimeout(200);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'docs/screenshots/'+info.project.name+'-'+width+'x'+height+'.png',fullPage:true});}});
+async function key(p: Page, k: string, n: number) {
+  await p.locator("body").click({ position: { x: 2, y: 2 } });
+  for (let i = 0; i < n; i++) {
+    await p.keyboard.press(k);
+    await p.waitForTimeout(180);
+  }
+}
+async function note(p: Page, text: string) {
+  await p.getByLabel("メモ本文").fill(text);
+  await p.getByRole("button", { name: "追加", exact: true }).click();
+}
+test("E1: 30fpsを拒否・不明な動画を拒否", async ({ page }) => {
+  await page.goto("/");
+  await page
+    .getByLabel("動画ファイル", { exact: true })
+    .setInputFiles(mock + "f30.mp4");
+  await expect(page.getByRole("alert")).toContainText(
+    "60fps の動画のみ対応しています",
+  );
+  await expect(page.locator("video")).toHaveCount(0);
+  await page.getByLabel("動画ファイル", { exact: true }).setInputFiles({
+    name: "broken.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from("broken"),
+  });
+  await expect(page.getByRole("alert")).toContainText("fps を判定できません");
+});
+test("E2/E3: 正確に5f進んで3f戻る、入力中のキー操作を抑止", async ({
+  page,
+}) => {
+  await open(page);
+  const start = await frame(page);
+  await key(page, ".", 5);
+  expect(await frame(page)).toBe(start + 5);
+  await key(page, ",", 3);
+  expect(await frame(page)).toBe(start + 2);
+  await page.getByLabel("メモ本文").focus();
+  await page.keyboard.press(".");
+  expect(await frame(page)).toBe(start + 2);
+});
+test("E4/E5: 長押し・解除・端停止", async ({ page }) => {
+  await open(page);
+  const plus = page.getByRole("button", { name: "1フレーム進む" });
+  const box = (await plus.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(650);
+  await expect(page.getByText("連続 ▶▶", { exact: true })).toBeVisible();
+  await page.waitForTimeout(850);
+  await page.mouse.up();
+  const end = await frame(page);
+  expect(end).toBeGreaterThanOrEqual(15);
+  expect(end).toBeLessThanOrEqual(45);
+  await page.waitForTimeout(400);
+  expect(await frame(page)).toBe(end);
+  await page.getByLabel("再生位置").fill("0");
+  await page.waitForTimeout(200);
+  const minus = (await page
+    .getByRole("button", { name: "1フレーム戻る" })
+    .boundingBox())!;
+  await page.mouse.move(minus.x + 20, minus.y + 20);
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  expect(await frame(page)).toBe(0);
+  await expect(page.locator(".hold-badge")).toHaveCount(0);
+  await page.mouse.up();
+});
+test("E6: メモジャンプ・時刻順・削除・端末保存", async ({ page }) => {
+  await open(page);
+  await key(page, ".", 5);
+  const f = await frame(page);
+  await note(page, "テスト");
+  await key(page, ".", 3);
+  await note(page, "次のメモ");
+  await page
+    .getByRole("button", { name: "[00:00] テスト", exact: true })
+    .click();
+  expect(await frame(page)).toBe(f);
+  expect(
+    await page.locator("video").evaluate((v) => (v as HTMLVideoElement).paused),
+  ).toBe(true);
+  await expect(page.getByText("端末に保存済み", { exact: true })).toBeVisible();
+  await page.reload();
+  await page
+    .getByLabel("動画ファイル", { exact: true })
+    .setInputFiles(mock + "f60.mp4");
+  await expect(page.locator(".memo-row")).toHaveCount(2);
+  await page
+    .getByRole("button", { name: "メモを削除：テスト", exact: true })
+    .click();
+  await expect(page.locator(".memo-row")).toHaveCount(1);
+});
+test("E7: コードポイント50文字まで入力", async ({ page }) => {
+  await open(page);
+  await page.getByLabel("メモ本文").fill("😀".repeat(51));
+  await expect(page.getByLabel("メモ本文")).toHaveValue("😀".repeat(50));
+  await expect(page.getByText("50/50", { exact: true })).toBeVisible();
+});
+test("E8: VTT書き出し・再読み込み", async ({ page }) => {
+  await open(page);
+  await note(page, "テスト<&>");
+  await key(page, ".", 4);
+  await note(page, "ふたつめ");
+  const before = await page.locator(".memo-jump").allTextContents();
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: ".vtt を書き出す", exact: true })
+    .click();
+  const d = await download;
+  expect(d.suggestedFilename()).toBe("f60.memo.vtt");
+  await page
+    .getByLabel("VTTファイル", { exact: true })
+    .setInputFiles((await d.path())!);
+  expect(await page.locator(".memo-jump").allTextContents()).toEqual(before);
+});
+test("E9: moov末尾のfps解析", async ({ page }) => {
+  await open(page, "f60_moov_end.mp4");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
+test("再生・Space・シーク・M", async ({ page }) => {
+  await open(page);
+  await key(page, " ", 1);
+  await expect(
+    page.getByRole("button", { name: "一時停止", exact: true }),
+  ).toBeEnabled();
+  await page.waitForTimeout(250);
+  expect(await frame(page)).toBeGreaterThan(0);
+  await key(page, " ", 1);
+  await expect(
+    page.getByRole("button", { name: "再生", exact: true }),
+  ).toBeEnabled();
+  await page.getByLabel("再生位置").fill("3");
+  await expect.poll(() => frame(page)).toBe(180);
+  await key(page, "m", 1);
+  await expect(page.getByLabel("メモ本文")).toBeFocused();
+});
+async function driveMock(
+  page: Page,
+  fallback = false,
+  existing = false,
+  failPatch = false,
+) {
+  const bytes = await readFile(mock + "f60.mp4"),
+    requests: { method: string; url: string; body: string }[] = [];
+  let created = false,
+    patchFailed = false;
+  await page.route("https://www.googleapis.com/**", async (route: Route) => {
+    const r = route.request(),
+      u = new URL(r.url()),
+      method = r.method(),
+      body = r.postData() || "";
+    requests.push({ method, url: r.url(), body });
+    const json = (data: unknown, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify(data),
+      });
+    if (u.searchParams.get("alt") === "media") {
+      if (u.pathname.endsWith("/memo-existing"))
+        return route.fulfill({
+          contentType: "text/vtt",
+          body: "WEBVTT\n\nf120\n00:00:02.000 --> 00:00:02.017\n既存メモ",
+        });
+      const range = r.headers()["range"];
+      if (range) {
+        const m = /bytes=(\d+)-(\d*)/.exec(range)!;
+        const start = Number(m[1]),
+          end = Math.min(Number(m[2] || bytes.length - 1), bytes.length - 1);
+        return route.fulfill({
+          status: 206,
+          headers: {
+            "Content-Type": "video/mp4",
+            "Content-Range": "bytes " + start + "-" + end + "/" + bytes.length,
+            "Accept-Ranges": "bytes",
+          },
+          body: bytes.subarray(start, end + 1),
+        });
+      }
+      return route.fulfill({ contentType: "video/mp4", body: bytes });
+    }
+    if (method === "GET" && u.pathname.endsWith("/video-1"))
+      return json({
+        id: "video-1",
+        name: "sample.mp4",
+        size: String(bytes.length),
+        mimeType: "video/mp4",
+        parents: ["parent-1"],
+      });
+    if (method === "GET" && u.pathname.endsWith("/files"))
+      return json({
+        files:
+          existing && u.searchParams.get("q")?.includes("framestepVideoId")
+            ? [{ id: "memo-existing", name: "sample.memo.vtt" }]
+            : [],
+      });
+    if (
+      method === "POST" &&
+      body.includes("application/vnd.google-apps.folder")
+    )
+      return json({ id: "folder-1" });
+    if (method === "POST" && u.searchParams.get("uploadType") === "multipart") {
+      if (fallback && !body.includes("folder-1"))
+        return json({ error: {} }, 403);
+      created = true;
+      return json({ id: "memo-1" });
+    }
+    if (method === "PATCH") {
+      if (failPatch && !patchFailed) {
+        patchFailed = true;
+        return json({ error: {} }, 500);
+      }
+      return json({ id: "memo-1" });
+    }
+    return json({ unexpected: r.url() }, 404);
+  });
+  await page.goto("/");
+  await page.evaluate(() =>
+    window.__framestep!.openDrive({ fileId: "video-1", token: "mock-token" }),
+  );
+  await expect(
+    page.getByRole("button", { name: "再生", exact: true }),
+  ).toBeEnabled();
+  return {
+    requests,
+    get created() {
+      return created;
+    },
+  };
+}
+test("E10: Drive再生、multipartとPATCH、メタデータ", async ({ page }) => {
+  const mock = await driveMock(page);
+  await note(page, "Driveテスト");
+  await expect.poll(() => mock.created).toBe(true);
+  const create = mock.requests.find((r) => r.method === "POST")!;
+  expect(create.body).toContain('"parents":["parent-1"]');
+  expect(create.body).toContain('"framestepVideoId":"video-1"');
+  expect(create.body).toContain('"name":"sample.memo.vtt"');
+  expect(create.body).toContain("WEBVTT");
+  await note(page, "更新");
+  await expect
+    .poll(() => mock.requests.filter((r) => r.method === "PATCH").length)
+    .toBe(1);
+  await expect(
+    page.getByText("Drive に保存済み", { exact: true }),
+  ).toBeVisible();
+});
+test("E10: 403で代替フォルダへ保存、セッション内で再利用", async ({ page }) => {
+  const mock = await driveMock(page, true);
+  await note(page, "代替");
+  await expect.poll(() => mock.created).toBe(true);
+  expect(mock.requests.some((r) => r.body.includes("FrameStep メモ"))).toBe(
+    true,
+  );
+  expect(
+    mock.requests.some((r) => r.body.includes('"parents":["folder-1"]')),
+  ).toBe(true);
+});
+test("E10: 既存VTT読込・保存失敗後の再試行", async ({ page }) => {
+  const mock = await driveMock(page, false, true, true);
+  await expect(
+    page.getByRole("button", { name: "[00:02] 既存メモ", exact: true }),
+  ).toBeVisible();
+  await note(page, "変更");
+  await expect(page.getByRole("alert")).toContainText("メモの保存に失敗");
+  await page
+    .getByRole("button", { name: "保存に失敗しました［再試行］" })
+    .click();
+  await expect(
+    page.getByText("Drive に保存済み", { exact: true }),
+  ).toBeVisible();
+  expect(mock.requests.filter((r) => r.method === "PATCH")).toHaveLength(2);
+});
+test("E11: 390×844と1280×800、横スクロールなし", async ({ page }, info) => {
+  await open(page);
+  await note(page, "テイクバック開始");
+  await page.getByLabel("再生位置").fill("3");
+  await page.waitForTimeout(200);
+  await note(page, "インパクトの位置");
+  await expect(page.getByText("端末に保存済み", { exact: true })).toBeVisible();
+  await mkdir("docs/screenshots", { recursive: true });
+  for (const [width, height] of [
+    [390, 844],
+    [1280, 800],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(200);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path:
+        "docs/screenshots/" +
+        info.project.name +
+        "-" +
+        width +
+        "x" +
+        height +
+        ".png",
+      fullPage: true,
+    });
+  }
+});
