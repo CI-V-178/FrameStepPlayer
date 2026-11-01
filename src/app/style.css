@@ -639,3 +639,77 @@ kbd {
 .markers {
   top: 6px;
 }
+
+.file-selection {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  color: #ecedee;
+  background: #1a1d22;
+  border: 1px solid #2e333a;
+  border-radius: 12px;
+}
+.file-selection::backdrop {
+  background: #000a;
+}
+.file-selection h2 {
+  font-size: 18px;
+  margin-bottom: 24px;
+}
+.file-selection table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.file-selection th {
+  color: #9aa0a8;
+  font-weight: 500;
+  font-size: 11px;
+  padding: 0 12px 12px 0;
+}
+.file-selection td {
+  padding: 16px 12px 16px 0;
+  border-top: 1px solid #2e333a;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.file-selection th:first-child {
+  width: 48%;
+}
+.file-selection th:nth-child(2) {
+  width: 18%;
+}
+.file-selection th:last-child {
+  width: 34%;
+}
+.file-selection td:last-child {
+  font-size: 12px;
+}
+.selection-note {
+  color: #9aa0a8;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.selection-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+@media (max-width: 500px) {
+  .file-selection {
+    padding: 20px 16px;
+  }
+  .file-selection th:first-child {
+    width: 42%;
+  }
+  .file-selection th:last-child {
+    width: 40%;
+  }
+  .file-selection td {
+    font-size: 12px;
+  }
+}

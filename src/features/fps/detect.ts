@@ -2,10 +2,10 @@ import { createFile, type MP4BoxBuffer, type Movie } from "mp4box";
 export const acceptedFps = (fps: number) =>
   Number.isFinite(fps) && fps >= 59 && fps <= 60.5;
 export type ReadRange = (start: number, end: number) => Promise<ArrayBuffer>;
-export async function detectFps(
+export async function readVideoInfo(
   size: number,
   read: ReadRange,
-): Promise<number> {
+): Promise<{ fps: number; duration: number }> {
   return new Promise((resolve, reject) => {
     let done = false;
     const parser = createFile(),
@@ -26,7 +26,7 @@ export async function detectFps(
       if (!Number.isFinite(fps)) return fail();
       done = true;
       clearTimeout(timer);
-      resolve(fps);
+      resolve({ fps, duration: track.duration / track.timescale });
     };
     const append = (data: ArrayBuffer, start: number) => {
       const buffer = data as MP4BoxBuffer;
@@ -50,6 +50,12 @@ export async function detectFps(
       }
     })();
   });
+}
+export async function detectFps(
+  size: number,
+  read: ReadRange,
+): Promise<number> {
+  return (await readVideoInfo(size, read)).fps;
 }
 export async function require60(size: number, read: ReadRange) {
   const fps = await detectFps(size, read);

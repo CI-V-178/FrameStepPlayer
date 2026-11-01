@@ -6,6 +6,8 @@ export interface DriveFile {
   size: string;
   mimeType: string;
   parents?: string[];
+  createdTime?: string;
+  videoMediaMetadata?: { durationMillis?: string };
 }
 export class DriveError extends Error {
   constructor(public status: number) {
@@ -36,7 +38,7 @@ export const metadata = async (id: string): Promise<DriveFile> =>
       base +
         "/" +
         encodeURIComponent(id) +
-        "?fields=id,name,size,mimeType,parents&supportsAllDrives=true",
+        "?fields=id,name,size,mimeType,parents,createdTime,videoMediaMetadata(durationMillis)&supportsAllDrives=true",
     )
   ).json();
 export const mediaUrl = (id: string) =>
