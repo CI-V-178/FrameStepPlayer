@@ -10,7 +10,11 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "pages": "node scripts/generate-pages.mjs",
+    "licenses": "node scripts/generate-licenses.mjs",
+    "prebuild": "npm run pages && npm run licenses",
+    "predev": "npm run pages"
   },
   "dependencies": {
     "mp4box": "^2.3.0",
@@ -23,10 +27,18 @@
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "license-checker-rseidelsohn": "^4.4.2",
     "node": "^22.0.0",
     "prettier": "^3.9.10",
     "typescript": "~5.8.3",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "license": "MIT",
+  "overrides": {
+    "license-checker-rseidelsohn": {
+      "glob": "^14.0.2",
+      "minimatch": "^11.0.1"
+    }
   }
 }

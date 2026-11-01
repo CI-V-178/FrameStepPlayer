@@ -1,13 +1,19 @@
 {
+  "cleanUrls": true,
   "headers": [
     {
       "source": "/sw.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
-      "source": "/((?!drive-stream/|assets/|sw\\.js|manifest\\.webmanifest|icon-).*)",
+      "source": "/((?!(?:help|privacy|terms|licenses)(?:\\.html)?/?$|licenses\\.txt$|google[^/]*\\.html$|drive-stream/|assets/|site\\.css$|sw\\.js$|manifest\\.webmanifest$|icon-).*)",
       "destination": "/index.html"
     }
   ]
