@@ -23,6 +23,8 @@ import {
 import { prepareStream } from "../features/drive/stream";
 import StepButton from "./StepButton";
 import Icon from "./Icon";
+import { SiteFooter, SiteLinks, SiteMenu } from "../shared/SiteFooter";
+import { siteInfo } from "../shared/siteInfo";
 import FileSelectionDialog, {
   type FileSelection,
 } from "../features/selection/FileSelection";
@@ -411,6 +413,7 @@ export default function App() {
           >
             端末から開く
           </button>
+          {opened && <SiteMenu />}
         </div>
       </header>
       {error && (
@@ -430,34 +433,37 @@ export default function App() {
         </div>
       )}
       {!opened ? (
-        <main className="welcome">
-          <div className="welcome-icon">
-            <Icon kind="film" />
-          </div>
-          <p className="eyebrow">ひとつのフレームに、ひとつの発見。</p>
-          <h1>FrameStep Player</h1>
-          <p>
-            Google Drive の 60fps 動画を
-            <br className="mobile-break" /> 1 フレームずつ確認できます
-          </p>
-          <div className="welcome-actions">
-            <button
-              className="primary"
-              disabled={driveDisabled}
-              onClick={() => void chooseDrive()}
-            >
-              <Icon kind="folder" />
-              Google でログインして Drive から開く
-            </button>
-            <button
-              disabled={!!loading}
-              onClick={() => fileInput.current?.click()}
-            >
-              端末から開く
-            </button>
-          </div>
-          <p className="welcome-hint">60fps の MP4・MOV に対応</p>
-        </main>
+        <>
+          <main className="welcome">
+            <div className="welcome-icon">
+              <Icon kind="film" />
+            </div>
+            <p className="eyebrow">ひとつのフレームに、ひとつの発見。</p>
+            <h1>{siteInfo.appName}</h1>
+            <p>
+              Google Drive の 60fps 動画を
+              <br className="mobile-break" /> 1 フレームずつ確認できます
+            </p>
+            <div className="welcome-actions">
+              <button
+                className="primary"
+                disabled={driveDisabled}
+                onClick={() => void chooseDrive()}
+              >
+                <Icon kind="folder" />
+                Google でログインして Drive から開く
+              </button>
+              <button
+                disabled={!!loading}
+                onClick={() => fileInput.current?.click()}
+              >
+                端末から開く
+              </button>
+            </div>
+            <p className="welcome-hint">60fps の MP4・MOV に対応</p>
+          </main>
+          <SiteFooter />
+        </>
       ) : (
         <main className="workspace">
           <section className="player" aria-label="動画プレーヤー">
@@ -666,6 +672,7 @@ export default function App() {
                 <span>メモ入力へ</span>
               </p>
             </section>
+            <SiteLinks className="site-panel-links" />
           </aside>
         </main>
       )}
