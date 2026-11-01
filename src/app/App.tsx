@@ -9,7 +9,7 @@ import {
 } from "../features/memo/vtt";
 import { SaveQueue } from "../features/memo/queue";
 import { FrameController } from "../features/player/controller";
-import { require60 } from "../features/fps/detect";
+import { readVideoInfo, require60 } from "../features/fps/detect";
 import { configured, pickVideo, seedToken } from "../features/drive/auth";
 import {
   metadata,
@@ -23,6 +23,9 @@ import {
 import { prepareStream } from "../features/drive/stream";
 import StepButton from "./StepButton";
 import Icon from "./Icon";
+import FileSelectionDialog, {
+  type FileSelection,
+} from "../features/selection/FileSelection";
 
 type OpenVideo = { name: string; src: string; key?: string; drive?: DriveFile };
 type Status = "saved" | "saving" | "error";
@@ -48,6 +51,7 @@ export default function App() {
     objectUrls = useRef<string[]>([]),
     metadataTimer = useRef<ReturnType<typeof setTimeout>>(),
     fallbackBusy = useRef(false);
+  const [selection, setSelection] = useState<FileSelection>();
   const [opened, setOpened] = useState<OpenVideo>(),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(""),
@@ -96,7 +100,9 @@ export default function App() {
       if (
         target.matches("input,textarea,select") ||
         target.isContentEditable ||
-        !opened
+        !opened ||
+        loading ||
+        selection
       )
         return;
       if ([",", ".", " ", "m", "M"].includes(e.key)) {
@@ -109,7 +115,7 @@ export default function App() {
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [opened, loading]);
+  }, [opened, loading, selection]);
   async function begin() {
     if (queue.current?.dirty) {
       await queue.current.flush();
@@ -182,10 +188,10 @@ export default function App() {
       setLoading("");
     }
   }
-  async function openDrive(fileId: string) {
+  async function openDrive(fileId: string, selectedFile?: DriveFile) {
     try {
       await begin();
-      const file = await metadata(fileId);
+      const file = selectedFile ?? (await metadata(fileId));
       await require60(Number(file.size), (start, end) =>
         range(fileId, start, end),
       );
@@ -213,7 +219,7 @@ export default function App() {
         getFrame: () => controller.current?.frame || 0,
         openDrive: async ({ fileId, token }) => {
           seedToken(token);
-          await openDrive(fileId);
+          await selectDrive(fileId);
         },
       };
     return () => {
@@ -249,10 +255,66 @@ export default function App() {
       fallbackBusy.current = false;
     }
   }
+  async function selectLocal(file: File) {
+    video.current?.pause();
+    setError("");
+    setLoading("ファイル情報を取得中…");
+    try {
+      const info = await readVideoInfo(file.size, (start, end) =>
+        file.slice(start, end + 1).arrayBuffer(),
+      );
+      setSelection({
+        source: "local",
+        file,
+        name: file.name,
+        duration: info.duration,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : playbackError);
+    } finally {
+      setLoading("");
+    }
+  }
+  async function selectDrive(id: string) {
+    video.current?.pause();
+    setError("");
+    setLoading("ファイル情報を取得中…");
+    try {
+      const file = await metadata(id);
+      const millis = file.videoMediaMetadata?.durationMillis;
+      const seconds = millis === undefined ? NaN : Number(millis) / 1000;
+      const duration =
+        Number.isFinite(seconds) && seconds > 0
+          ? seconds
+          : (
+              await readVideoInfo(Number(file.size), (start, end) =>
+                range(id, start, end),
+              )
+            ).duration;
+      setSelection({
+        source: "drive",
+        file,
+        name: file.name,
+        duration,
+        createdTime: file.createdTime,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : playbackError);
+    } finally {
+      setLoading("");
+    }
+  }
+  function confirmSelection() {
+    const candidate = selection;
+    setSelection(undefined);
+    if (!candidate) return;
+    if (candidate.source === "local") void openLocal(candidate.file);
+    else void openDrive(candidate.file.id, candidate.file);
+  }
   async function chooseDrive() {
     try {
       const id = await pickVideo();
-      if (id) await openDrive(id);
+      if (id) await selectDrive(id);
     } catch {
       setError("Google ログインできませんでした");
     }
@@ -294,6 +356,13 @@ export default function App() {
   const driveDisabled = !configured || !!loading;
   return (
     <div className="app">
+      {selection && (
+        <FileSelectionDialog
+          file={selection}
+          onOpen={confirmSelection}
+          onCancel={() => setSelection(undefined)}
+        />
+      )}
       <input
         ref={fileInput}
         className="file-input"
@@ -302,7 +371,7 @@ export default function App() {
         aria-label="動画ファイル"
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) void openLocal(f);
+          if (f) void selectLocal(f);
           e.target.value = "";
         }}
       />

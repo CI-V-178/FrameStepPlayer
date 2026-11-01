@@ -1,12 +1,19 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { readFile, mkdir } from "node:fs/promises";
 const mock = "Example/MOCK/";
+async function confirmSelection(p: Page) {
+  await p
+    .getByRole("dialog", { name: "動画を選択" })
+    .getByRole("button", { name: "この動画を開く" })
+    .click();
+}
 const frame = (p: Page) => p.evaluate(() => window.__framestep!.getFrame());
 async function open(p: Page, name = "f60.mp4") {
   await p.goto("/");
   await p
     .getByLabel("動画ファイル", { exact: true })
     .setInputFiles(mock + name);
+  await confirmSelection(p);
   await expect(
     p.getByRole("button", { name: "再生", exact: true }),
   ).toBeEnabled();
@@ -27,6 +34,7 @@ test("E1: 30fpsを拒否・不明な動画を拒否", async ({ page }) => {
   await page
     .getByLabel("動画ファイル", { exact: true })
     .setInputFiles(mock + "f30.mp4");
+  await confirmSelection(page);
   await expect(page.getByRole("alert")).toContainText(
     "60fps の動画のみ対応しています",
   );
@@ -97,6 +105,7 @@ test("E6: メモジャンプ・時刻順・削除・端末保存", async ({ page
   await page
     .getByLabel("動画ファイル", { exact: true })
     .setInputFiles(mock + "f60.mp4");
+  await confirmSelection(page);
   await expect(page.locator(".memo-row")).toHaveCount(2);
   await page
     .getByRole("button", { name: "メモを削除：テスト", exact: true })
@@ -152,6 +161,7 @@ async function driveMock(
   fallback = false,
   existing = false,
   failPatch = false,
+  confirm = true,
 ) {
   const bytes = await readFile(mock + "f60.mp4"),
     requests: { method: string; url: string; body: string }[] = [];
@@ -199,6 +209,8 @@ async function driveMock(
         size: String(bytes.length),
         mimeType: "video/mp4",
         parents: ["parent-1"],
+        createdTime: "2026-11-01T12:34:00Z",
+        videoMediaMetadata: { durationMillis: "10000" },
       });
     if (method === "GET" && u.pathname.endsWith("/files"))
       return json({
@@ -231,9 +243,12 @@ async function driveMock(
   await page.evaluate(() =>
     window.__framestep!.openDrive({ fileId: "video-1", token: "mock-token" }),
   );
-  await expect(
-    page.getByRole("button", { name: "再生", exact: true }),
-  ).toBeEnabled();
+  if (confirm) {
+    await confirmSelection(page);
+    await expect(
+      page.getByRole("button", { name: "再生", exact: true }),
+    ).toBeEnabled();
+  }
   return {
     requests,
     get created() {
@@ -315,4 +330,91 @@ test("E11: 390×844と1280×800、横スクロールなし", async ({ page }, in
       fullPage: true,
     });
   }
+});
+
+test("端末選択: 3項目のみ・画像化なし・キャンセルと再選択", async ({
+  page,
+}, info) => {
+  await page.addInitScript(() => {
+    const original = document.createElement.bind(document);
+    (window as unknown as { mediaElements: string[] }).mediaElements = [];
+    document.createElement = ((
+      name: string,
+      options?: ElementCreationOptions,
+    ) => {
+      if (["video", "canvas", "img"].includes(name.toLowerCase()))
+        (window as unknown as { mediaElements: string[] }).mediaElements.push(
+          name,
+        );
+      return original(name, options);
+    }) as typeof document.createElement;
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page
+    .getByLabel("動画ファイル", { exact: true })
+    .setInputFiles(mock + "f60.mp4");
+  const dialog = page.getByRole("dialog", { name: "動画を選択" });
+  await expect(dialog).toBeVisible();
+  expect(await dialog.locator("th").allTextContents()).toEqual([
+    "ファイル名",
+    "長さ",
+    "作成日時",
+  ]);
+  expect(await dialog.locator("td").allTextContents()).toEqual([
+    "f60.mp4",
+    "00:10",
+    "取得不可",
+  ]);
+  await expect(dialog.locator("video,img,canvas")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { mediaElements: string[] }).mediaElements,
+    ),
+  ).toEqual([]);
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  );
+  await page.screenshot({
+    path: "docs/screenshots/" + info.project.name + "-local-selection.png",
+    fullPage: true,
+  });
+  await dialog.getByRole("button", { name: "キャンセル" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator("video")).toHaveCount(0);
+  await page
+    .getByLabel("動画ファイル", { exact: true })
+    .setInputFiles(mock + "f60.mp4");
+  await confirmSelection(page);
+  await expect(
+    page.getByRole("button", { name: "再生", exact: true }),
+  ).toBeEnabled();
+});
+test("Drive選択: メタデータだけで長さと作成日時を表示", async ({
+  page,
+}, info) => {
+  const mock = await driveMock(page, false, false, false, false);
+  const dialog = page.getByRole("dialog", { name: "動画を選択" });
+  await expect(dialog).toBeVisible();
+  expect(await dialog.locator("th").allTextContents()).toEqual([
+    "ファイル名",
+    "長さ",
+    "作成日時",
+  ]);
+  await expect(dialog.locator("td").nth(0)).toHaveText("sample.mp4");
+  await expect(dialog.locator("td").nth(1)).toHaveText("00:10");
+  await expect(dialog.locator("td").nth(2)).toContainText("2026/11/01");
+  await expect(page.locator("video,img,canvas")).toHaveCount(0);
+  expect(mock.requests).toHaveLength(1);
+  const fields = new URL(mock.requests[0].url).searchParams.get("fields")!;
+  expect(fields).toContain("createdTime");
+  expect(fields).toContain("durationMillis");
+  expect(fields).not.toMatch(/thumbnail/i);
+  await page.screenshot({
+    path: "docs/screenshots/" + info.project.name + "-drive-selection.png",
+    fullPage: true,
+  });
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  expect(mock.requests).toHaveLength(1);
 });

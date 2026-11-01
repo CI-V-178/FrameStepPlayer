@@ -95,11 +95,16 @@ it("Pickerにトークン・APIキー・App ID・動画MIMEを指定", async () 
       picker: {
         PickerBuilder: Builder,
         DocsView: class {
+          setMode(mode: string) {
+            received.mode = mode;
+            return this;
+          }
           setMimeTypes(m: string) {
             received.mime = m;
             return this;
           }
         },
+        DocsViewMode: { LIST: "list" },
         ViewId: { DOCS_VIDEOS: "videos" },
         Action: { PICKED: "picked", CANCEL: "cancel" },
       },
@@ -113,5 +118,6 @@ it("Pickerにトークン・APIキー・App ID・動画MIMEを指定", async () 
     key: "key",
     app: "123",
     mime: "video/mp4,video/quicktime",
+    mode: "list",
   });
 });

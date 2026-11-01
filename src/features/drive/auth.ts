@@ -40,9 +40,14 @@ interface PickerBuilder {
   setLocale(locale: string): this;
   build(): { setVisible(v: boolean): void };
 }
+interface DocsView {
+  setMimeTypes(mime: string): this;
+  setMode(mode: string): this;
+}
 interface PickerSDK {
   PickerBuilder: new () => PickerBuilder;
-  DocsView: new (id: string) => { setMimeTypes: (mime: string) => unknown };
+  DocsView: new (id: string) => DocsView;
+  DocsViewMode: { LIST: string };
   ViewId: { DOCS_VIDEOS: string };
   Action: { PICKED: string; CANCEL: string };
 }
@@ -133,9 +138,9 @@ export async function pickVideo(): Promise<string | null> {
       .setAppId(import.meta.env.VITE_GOOGLE_APP_ID)
       .setLocale("ja")
       .addView(
-        new p.DocsView(p.ViewId.DOCS_VIDEOS).setMimeTypes(
-          "video/mp4,video/quicktime",
-        ),
+        new p.DocsView(p.ViewId.DOCS_VIDEOS)
+          .setMode(p.DocsViewMode.LIST)
+          .setMimeTypes("video/mp4,video/quicktime"),
       )
       .setCallback((data) => {
         if (data.action === p.Action.PICKED)
