@@ -1,55 +1,73 @@
 # FrameStep Player
 
-Google Drive / 端末の60fps動画を1フレームずつ確認し、停止位置にメモを残す静的PWAです。React 18、TypeScript、Viteを使い、独自のサーバーやDBは必要ありません。
+Google Driveや端末の60fps動画を1フレームずつ確認し、タイムスタンプ付きメモを残せる無料のWebアプリです。
 
-## 起動
+## 公開 URL
 
-Node.js 22.12以上（推奨: `.nvmrc` の22系）、npm、テスト動画の再生成にはffmpegが必要です。
+[https://frame-step-player.vercel.app](https://frame-step-player.vercel.app)
 
-```sh
-npm ci
+## 主な機能
+
+- ±1fの移動、長押しによる連続移動、PCのキー操作
+- 50文字以内のタイムスタンプ付きメモ
+- Google DriveへのVTT自動保存、端末ブラウザへの保存、VTT入出力
+
+## 対応している動画
+
+60fpsのmp4 / movのみ。平均59.0〜60.5fpsを受け入れます。
+
+## 使い方
+
+1. 「Google でログインして Drive から開く」または「端末から開く」で動画を選び、情報を確認して「この動画を開く」を押します。
+2. 「−1f」「+1f」をタップしてフレーム移動。0.4秒以上の長押しで連続移動し、離すと止まります。
+3. 停止位置でメモを入力し「追加」またはEnter。一覧を選ぶとその位置へ戻り、×で削除できます。
+
+詳しくは[使い方](https://frame-step-player.vercel.app/help)をご覧ください。
+
+## プライバシー
+
+動画・メモ・アクセストークンは運営者のサーバーへ送信しません。<br>
+DriveはブラウザからGoogleへ直接アクセスし、メモは自分のDriveまたは端末のブラウザに保存します。<br>
+Google Fontsへの通信とVercelのアクセスログについては[プライバシーポリシー](https://frame-step-player.vercel.app/privacy)をご覧ください。
+
+## 開発方法
+
+Node.js 22.12以上（.nvmrcの22系を推奨）とnpmを使用します。
+
+~~~sh
+npm install
 cp .env.example .env
 npm run dev
-```
+~~~
 
-Google設定が空でも「端末から開く」が使えます。`.env` はGitの追跡対象外です。
+.env.exampleのGoogle設定3つを.envへ設定してください。未設定でも端末から開けます。.envはコミットしません。
 
-## Google / Vercel 設定
-
-1. Google CloudでDrive APIとGoogle Picker APIを有効にします。
-2. Webアプリ用OAuthクライアントを作成し、承認済みのJavaScript生成元に `http://localhost:5173` と公開URLを追加します。
-3. OAuth同意画面のテストユーザーに利用アカウントを追加し、スコープは `https://www.googleapis.com/auth/drive.file` のみを使用します。
-4. APIキーは利用する生成元とAPIに制限します。
-5. `.env.example` の3変数をローカルの `.env` またはVercel環境変数へ設定します。`VITE_GOOGLE_APP_ID` はプロジェクト番号（数字）です。
-6. Vercelへリポジトリの `mvp` ブランチを取り込み、Viteプリセット、ビルド `npm run build`、出力先 `dist` を指定します。環境変数を変更したら再デプロイします。
-
-## 操作とメモ
-
-- `,` / `.` で1フレーム戻る / 進む。Spaceで再生 / 一時停止、Mでメモ入力へ。
-- ±1fの長押しは400ms後に連続移動します。入力欄にフォーカスがある間はキー操作を停止します。
-- メモは50コードポイントまで。時刻をタップするとその位置に戻り、削除は即時に反映します。
-- ローカル動画のメモはファイル名とサイズをキーにlocalStorageへ保存します。VTTの書き出し・読み込みも可能です。
-- Drive動画のメモは動画と同じフォルダの `*.memo.vtt` へ自動保存します。作成権限がない場合はマイドライブの「FrameStep メモ」へ保存します。
-- Driveストリーミングに失敗した場合、動画を全件取得するBlob再生へ自動的に切り替えます。
-
-## 検証
-
-```sh
+~~~sh
 npm run build
 npm test
 npx playwright install --with-deps chromium webkit
 npm run test:e2e
-```
+npm run licenses
+~~~
 
-テスト動画は `bash Example/MOCK/generate.sh` で再生成できます。E2EはGoogle APIを模擬し、認証情報は不要です。テスト時のみ `VITE_E2E=1` でフックを公開し、本番ビルドでは公開しません。環境の未使用IPv4ポートがタイムアウトするため、E2EサーバーはIPv6ループバックの5174番を使用します。
+テスト動画の再生成は bash Example/MOCK/generate.sh。E2EのDrive通信はモックで検証し、専用サーバーはIPv6ループバックの5174番を使用します。
 
-Service WorkerのRange・206・トークン更新・キャッシュ対象は単体テストで検証します。ブラウザE2EのDrive再生はSWを無効化したBlob代替経路で検証します。
+公開ページとLICENSE・このREADMEはsrc/shared/siteInfo.tsとscripts/site-content.mjsをもとに、npm run pages（buildとdevの前にも実行）で生成します。生成済みHTMLもコミットし、JavaScriptなしで読めます。第三者通知はnpm run licensesで生成します。
 
-完成報告と実機の確認項目は [docs/completion-report.md](docs/completion-report.md)、画面は `docs/screenshots/` に保存しています。
+Search ConsoleのHTMLタグ方式ではVITE_GOOGLE_SITE_VERIFICATIONを設定して再ビルドします。空ならタグを除去します。public/にGoogle指定のgoogle*.htmlを置くHTMLファイル方式も使用できます（確認ファイル自体は同梱していません）。
 
+Vercelのビルドはnpm run build、出力先はdistです。cleanUrlsで/help・/privacy・/terms・/licensesを配信します。VercelやGCPの設定は手動で行ってください。
 
-## サムネイルなしの選択
+ファイル選択のOS側制約などは[ファイル選択](docs/file-selection.md)、公開設定の手順と検証結果は[公開準備レポート](docs/publish-report.md)を参照してください。
 
-Driveは一覧表示で開き、Drive・端末の選択後にはファイル名・長さ・作成日時だけの確認画面を表示します。動画を開くまではサムネイル生成やプレビュー再生を行いません。
+## ライセンス
 
-端末のOS標準ファイル選択画面の表示項目はアプリから指定できません。また、端末ファイルの作成日時はブラウザから取得できないため「取得不可」と表示します。詳しくは [ファイル選択](docs/file-selection.md) を参照してください。
+MIT。本体の[LICENSE](LICENSE)と、依存パッケージ・フォントの[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)をご確認ください。
+
+## 連絡先
+
+- [GitHub Issues](https://github.com/CI-V-178/FrameStepPlayer/issues)
+- [X: @carrot_inaba](https://x.com/carrot_inaba)
+- [メール: carrotinaba@gmail.com](mailto:carrotinaba@gmail.com)
+
+運営者：CI-V-178（個人開発）
