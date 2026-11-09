@@ -11,7 +11,7 @@ export interface DriveFile {
 }
 export class DriveError extends Error {
   constructor(public status: number) {
-    super("Drive API: " + status);
+    super("Google ドライブ API: " + status);
   }
 }
 const base = "https://www.googleapis.com/drive/v3/files";
