@@ -270,8 +270,16 @@ test("E10: Drive再生、multipartとPATCH、メタデータ", async ({ page }) 
     .poll(() => mock.requests.filter((r) => r.method === "PATCH").length)
     .toBe(1);
   await expect(
-    page.getByText("Drive に保存済み", { exact: true }),
+    page.getByText("Google ドライブに保存済み", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("メモファイルを Google ドライブで開く ↗", { exact: true }),
+  ).toBeVisible();
+  // 利用者が入力したメモ本文（"Driveテスト"）は除き、画面の文言だけを確認
+  for (const part of ["header", ".save-state", ".memo-files"])
+    expect(await page.locator(part).innerText()).not.toMatch(
+      /(?<!Google )\bDrive\b/,
+    );
 });
 test("E10: 403で代替フォルダへ保存、セッション内で再利用", async ({ page }) => {
   const mock = await driveMock(page, true);
@@ -295,7 +303,7 @@ test("E10: 既存VTT読込・保存失敗後の再試行", async ({ page }) => {
     .getByRole("button", { name: "保存に失敗しました［再試行］" })
     .click();
   await expect(
-    page.getByText("Drive に保存済み", { exact: true }),
+    page.getByText("Google ドライブに保存済み", { exact: true }),
   ).toBeVisible();
   expect(mock.requests.filter((r) => r.method === "PATCH")).toHaveLength(2);
 });
