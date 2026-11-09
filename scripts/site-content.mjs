@@ -4,6 +4,17 @@ export const list = (...items) =>
   "<ul>" + items.map((item) => "<li>" + item + "</li>").join("") + "</ul>";
 export const section = (title, body) =>
   "<section><h2>" + title + "</h2>" + body + "</section>";
+export const table = (head, rows) =>
+  '<div class="table-wrap"><table><thead><tr>' +
+  head.map((cell) => '<th scope="col">' + cell + "</th>").join("") +
+  "</tr></thead><tbody>" +
+  rows
+    .map(
+      (row) =>
+        "<tr>" + row.map((cell) => "<td>" + cell + "</td>").join("") + "</tr>",
+    )
+    .join("") +
+  "</tbody></table></div>";
 export const external = (url, text) =>
   '<a href="' +
   url +
@@ -81,8 +92,8 @@ export const pages = {
       section(
         "2. 動画を開く",
         list(
-          "Google Driveから：「Google でログインして Drive から開く」→ Googleにログイン → 動画を選び、ファイル名・長さ・作成日時を確認して「この動画を開く」を押します。初回はGoogleの権限確認画面が出ます。",
-          "端末から：「端末から開く」→ 動画を選び、確認画面で「この動画を開く」を押します。スマホでは端末のファイル選択画面からGoogle Driveの動画を選べる場合もあります。",
+          "Google ドライブから：「Google でログイン」→ Googleにログイン →「Google ドライブから開く」→ 動画を選び、ファイル名・長さ・作成日時を確認して「この動画を開く」を押します。初回はGoogleの権限確認画面が出ます。",
+          "端末から：「端末から開く」→ 動画を選び、確認画面で「この動画を開く」を押します。スマホでは端末のファイル選択画面からGoogle ドライブの動画を選べる場合もあります。",
           "60fps以外の動画は開けません。確認画面にサムネイルは表示せず、端末ファイルの作成日時は取得できないため「取得不可」と表示します。",
         ),
       ) +
@@ -113,9 +124,9 @@ export const pages = {
       section(
         "6. メモの保存先",
         list(
-          "Driveから開いた動画：動画と同じフォルダの「動画名.memo.vtt」へ自動保存します。作成できない場合は、マイドライブの「FrameStep メモ」フォルダへ保存します。",
-          "別端末でもDriveから同じ動画を開けば、保存されたメモを読み込めます。変更後は「Drive に保存済み」の表示を確認してください。",
-          "端末から開いた動画：その端末のブラウザに保存します。「.vtt を書き出す」「.vtt を読み込む」で持ち運べます。端末のファイル選択からDriveを選んだ場合も、この保存方法です。",
+          "Google ドライブから開いた動画：動画と同じフォルダの「動画名.memo.vtt」へ自動保存します。作成できない場合は、マイドライブの「FrameStep メモ」フォルダへ保存します。",
+          "別端末でもGoogle ドライブから同じ動画を開けば、保存されたメモを読み込めます。変更後は「Google ドライブに保存済み」の表示を確認してください。",
+          "端末から開いた動画：その端末のブラウザに保存します。「.vtt を書き出す」「.vtt を読み込む」で持ち運べます。端末のファイル選択からGoogle ドライブを選んだ場合も、この保存方法です。",
         ),
       ) +
       section(
@@ -145,7 +156,7 @@ export const pages = {
       section(
         "1. Open a video",
         list(
-          "Choose “Google でログインして Drive から開く”, sign in to Google, select a video, review its filename, duration and creation date, and choose “この動画を開く” (Open this video). Google asks for permission the first time.",
+          "Choose “Google でログイン” (Sign in with Google) and sign in, then choose “Google ドライブから開く” (Open from Google Drive), select a video, review its filename, duration and creation date, and choose “この動画を開く” (Open this video). Google asks for permission the first time.",
           "Choose “端末から開く” (Open from device), select a video and confirm with “この動画を開く”. A mobile system file chooser may also offer Google Drive.",
           "Other frame rates cannot be opened. The confirmation screen has no thumbnails. Device-file creation dates are unavailable in the browser and are shown as unavailable.",
         ),
@@ -168,9 +179,9 @@ export const pages = {
       section(
         "4. Note storage",
         list(
-          "Videos opened through the Drive button: notes are saved automatically as video-name.memo.vtt in the video's folder, or in a “FrameStep メモ” folder in My Drive if creation there is denied.",
-          "Opening the same video through Drive on another device loads its saved notes. Wait for “Drive に保存済み” (Saved to Drive) after making changes.",
-          "Videos opened through the device chooser: notes stay in that browser. Use “.vtt を書き出す” (Export VTT) and “.vtt を読み込む” (Import VTT) to transfer them. This also applies when choosing a Drive file through the system device chooser.",
+          "Videos opened through the Google Drive button: notes are saved automatically as video-name.memo.vtt in the video's folder, or in a “FrameStep メモ” folder at the top level of your Google Drive if creation there is denied.",
+          "Opening the same video through Google Drive on another device loads its saved notes. Wait for “Google ドライブに保存済み” (Saved to Google Drive) after making changes.",
+          "Videos opened through the device chooser: notes stay in that browser. Use “.vtt を書き出す” (Export VTT) and “.vtt を読み込む” (Import VTT) to transfer them. This also applies when choosing a Google Drive file through the system device chooser.",
         ),
       ) +
       section(
@@ -194,7 +205,7 @@ export const pages = {
   privacy: {
     title: "プライバシーポリシー",
     description:
-      "FrameStep Playerが利用するGoogle認証情報、Driveファイル、メモ、キャッシュ、外部サービスについて。",
+      "FrameStep Playerが取得・利用・保存・共有するGoogleユーザーデータ（Google ドライブのファイル、認証情報）、メモ、キャッシュ、外部サービスについて。",
     ja:
       section("1. 運営者と連絡先", contact) +
       section(
@@ -203,40 +214,95 @@ export const pages = {
           "<strong>Googleアカウントの認証情報：</strong>Google Identity Servicesからアクセストークンを取得します。トークンはページとService Workerのメモリにのみ保持し、CookieやlocalStorageなどに永続保存せず、運営者のサーバーには送信しません。ページを閉じるとページ側のメモリは失われ、Service Worker側のメモリもWorkerの終了時に失われます。",
         ) +
           p(
-            "<strong>Google Driveのファイル：</strong>要求する権限は<code>https://www.googleapis.com/auth/drive.file</code>のみです。利用者が選びアクセスを許可した動画、その動画に対応するアプリのメモファイル（.memo.vtt）、アプリが作成した「FrameStep メモ」フォルダを扱います。選択画面ではファイル名・長さ・作成日時などのメタデータを利用します。",
+            "<strong>Google ドライブのファイル：</strong>要求する権限は<code>https://www.googleapis.com/auth/drive.file</code>（Google ドライブの「このアプリで使用する特定のファイルのみ」）だけです。利用者が選びアクセスを許可した動画、その動画に対応するアプリのメモファイル（.memo.vtt）、アプリが作成した「FrameStep メモ」フォルダを扱います。選択画面ではファイル名・長さ・作成日時などのメタデータを利用します。",
           ) +
           p(
-            "動画は利用者のブラウザがGoogle Drive APIへ直接リクエストして読み込みます。再生用にメモリ上のBlobを作る場合がありますが、運営者のサーバーへアップロードせず、動画やメモをService Workerのキャッシュに保存しません。端末から選んだ動画もブラウザ内で読み込み、アップロードしません。",
+            "動画は利用者のブラウザがGoogle ドライブ APIへ直接リクエストして読み込みます。再生用にメモリ上のBlobを作る場合がありますが、運営者のサーバーへアップロードせず、動画やメモをService Workerのキャッシュに保存しません。端末から選んだ動画もブラウザ内で読み込み、アップロードしません。",
           ) +
           p(
-            "<strong>メモ：</strong>Driveから開いた動画のメモは利用者自身のGoogle Driveへ保存します。端末から開いた動画のメモは、そのブラウザのlocalStorageにファイル名とサイズをキーとして保存します。VTTの書き出し・読み込みも利用者の操作で行います。",
+            "<strong>メモ：</strong>Google ドライブから開いた動画のメモは利用者自身のGoogle ドライブへ保存します。端末から開いた動画のメモは、そのブラウザのlocalStorageにファイル名とサイズをキーとして保存します。VTTの書き出し・読み込みも利用者の操作で行います。",
           ) +
           p(
             "<strong>アプリのキャッシュ：</strong>Service Workerは同じサイトの<code>/assets/</code>配下にあるJavaScript・CSSなど、画面を構成するファイルをキャッシュします。動画、メモ、アクセストークンはキャッシュしません。",
+          ) +
+          '<div class="policy-callout">' +
+          p("<strong>Limited Use：</strong>" + policySentence) +
+          p(
+            "FrameStep PlayerによるGoogle APIから受け取った情報の利用と他のアプリへの転送は、Limited Use（限定的な利用）の要件を含むGoogle API Services User Data Policyに従います。",
+          ) +
+          "</div>",
+      ) +
+      section(
+        "3. 取得・利用するGoogleユーザーデータの種類",
+        table(
+          ["データ", "内容", "使う目的"],
+          [
+            [
+              "OAuth アクセストークン",
+              "Google Identity Services で取得",
+              "Google ドライブ API の呼び出し",
+            ],
+            [
+              "選んだ動画のメタデータ",
+              "ファイル ID、名前、サイズ、MIME タイプ、親フォルダの ID、作成日時、動画の長さ",
+              "表示、fps の判定、メモファイルの保存先の決定",
+            ],
+            ["選んだ動画の中身", "動画データ", "ブラウザでの再生、fps の判定"],
+            [
+              "メモファイル",
+              "アプリが作った <code>.memo.vtt</code> の中身とメタデータ",
+              "メモの保存・読み込み",
+            ],
+            [
+              "アプリが作ったフォルダ",
+              "「FrameStep メモ」フォルダの ID",
+              "メモの保存先（動画のフォルダに保存できない場合）",
+            ],
+          ],
+        ) +
+          p(
+            "<strong>取得しないもの：</strong>メールアドレス、氏名、プロフィール写真、連絡先、利用者が選んでいない動画やそのほかのファイルは取得しません。",
           ),
       ) +
       section(
-        "3. 利用目的",
+        "4. 保存場所と保存期間",
+        list(
+          "アクセストークン：ブラウザのメモリ（ページとService Worker）にのみ保持します。タブを閉じると消え（Service Worker側はWorkerの終了時に消えます）、最長でもGoogleが定める有効期限までしか使えません。",
+          "動画：保存しません。再生中にブラウザが一時的に読み込むだけです。",
+          "メモ：利用者自身のGoogle ドライブ（利用者が削除するまで）、または端末のブラウザのlocalStorage（サイトデータを削除するまで）に保存します。",
+          "運営者のサーバーには、Googleユーザーデータを一切保存しません。",
+        ),
+      ) +
+      section(
+        "5. データの保護",
+        list(
+          "通信はすべてHTTPSで暗号化します。",
+          "アクセストークンをCookieやlocalStorageに保存しません。",
+          "運営者を含め、人が利用者のGoogleユーザーデータを閲覧することはありません。",
+        ),
+      ) +
+      section(
+        "6. 利用目的",
         p(
           "取得した情報は、動画の再生、フレーム確認、ファイルの選択、メモの保存・読み込みのためだけに利用します。広告、アクセス解析、AIの学習、その他の目的には利用しません。",
         ),
       ) +
       section(
-        "4. 第三者への提供",
+        "7. 第三者への提供・移転",
         p(
-          "運営者が動画、メモ、Googleのユーザーデータを販売したり、第三者へ提供したりすることはありません。利用者の指示によるGoogle Driveへの保存と、次項の外部サービスへの通常の通信は行われます。",
+          "運営者がGoogleユーザーデータ、動画、メモを第三者に販売・提供・移転することはありません。Googleユーザーデータを広告、信用力の判定、AI・機械学習モデルの学習に使うことはありません。利用者の指示によるGoogle ドライブへの保存と、次項の外部サービスへの通常の通信は行われます。",
         ),
       ) +
       section(
-        "5. 外部サービス",
+        "8. 外部サービス",
         list(
-          "Google：ログイン、Google Picker、Google Drive APIを利用します。" +
+          "Google：ログイン、Google Picker、Google ドライブ APIを利用します。" +
             external(
               "https://policies.google.com/privacy",
               "Googleのプライバシーポリシー",
             ) +
             "をご確認ください。",
-          "Google Fonts：アプリの画面でNoto Sans JPとJetBrains Monoを読み込むため、閲覧時にIPアドレスやリクエスト情報などがGoogleに送信されます。" +
+          "Google Fonts：アプリの画面でNoto Sans JP、JetBrains Mono、Robotoを読み込むため、閲覧時にIPアドレスやリクエスト情報などがGoogleに送信されます。" +
             external(
               "https://developers.google.com/fonts/faq/privacy",
               "Google Fontsのプライバシー情報",
@@ -252,16 +318,16 @@ export const pages = {
         ),
       ) +
       section(
-        "6. Google API Services User Data Policy",
+        "9. Google API Services User Data Policy",
         p(policySentence) +
           p(
             "日本語訳：FrameStep PlayerがGoogle APIから受け取った情報を利用し、他のアプリへ転送する場合は、Limited Use（限定的な利用）の要件を含むGoogle API Services User Data Policyに従います。",
           ),
       ) +
       section(
-        "7. データの削除とアクセスの取り消し",
+        "10. データの削除とアクセスの取り消し",
         list(
-          "Driveのメモ：Google Drive上の該当する.memo.vttファイルを削除してください。画面内の×では個々のメモを削除できます。",
+          "Google ドライブのメモ：Google ドライブ上の該当する.memo.vttファイルを削除してください。画面内の×では個々のメモを削除できます。",
           "端末のメモ：ブラウザのこのサイトのサイトデータを削除してください。",
           "アクセスの取り消し：" +
             external(
@@ -269,15 +335,21 @@ export const pages = {
               "Googleアカウントのアクセス許可",
             ) +
             "でFrameStep Playerへのアクセスを取り消してください。取り消しても既存のメモファイルは自動削除されません。",
+          "削除の依頼：運営者はGoogleユーザーデータを保持していないため、削除の対象となるデータはありません。ご質問は1.の連絡先へお寄せください。",
         ),
       ) +
       section(
-        "8. 改定",
+        "11. 改定",
         p("変更がある場合はこのページで告知し、改定日を更新します。"),
       ) +
       section(
-        "9. 制定日・改定日",
-        p("制定日・最終改定日：" + s.establishedDate),
+        "12. 制定日・改定日",
+        p(
+          "制定日：" +
+            s.establishedDate +
+            "　最終改定日：" +
+            s.privacyRevisedDate,
+        ),
       ),
     en:
       section("English — Privacy Policy", contactEn) +
@@ -287,34 +359,90 @@ export const pages = {
           "<strong>Google authorization:</strong> The app obtains an access token through Google Identity Services. It is held only in page and Service Worker memory, never persisted in cookies or localStorage, and is not sent to the operator's server. Page memory is lost when the page closes; Worker memory is lost when that Worker terminates.",
         ) +
           p(
-            "<strong>Google Drive files:</strong> The only requested scope is drive.file. The app handles videos selected and authorized by the user, associated app-created .memo.vtt files and the app-created “FrameStep メモ” folder. Selection uses metadata such as filename, duration and creation time.",
+            "<strong>Google Drive files:</strong> The only requested scope is <code>https://www.googleapis.com/auth/drive.file</code> (Google Drive access limited to the specific files you use with this app). The app handles videos selected and authorized by the user, associated app-created .memo.vtt files and the app-created “FrameStep メモ” folder. Selection uses metadata such as filename, duration and creation time.",
           ) +
           p(
             "Your browser requests videos directly from the Google Drive API. A temporary in-memory Blob may be used for playback. Videos are not uploaded to the operator's server or saved in the Service Worker cache. Device videos are read within the browser without uploading.",
           ) +
           p(
-            "<strong>Notes:</strong> For videos opened through Drive, notes are stored in your own Google Drive. For videos opened through the device chooser, notes are stored in that browser's localStorage, keyed by filename and size. VTT export and import are initiated by you.",
+            "<strong>Notes:</strong> For videos opened through Google Drive, notes are stored in your own Google Drive. For videos opened through the device chooser, notes are stored in that browser's localStorage, keyed by filename and size. VTT export and import are initiated by you.",
           ) +
           p(
             "<strong>App cache:</strong> The Service Worker caches same-origin files under /assets/, such as JavaScript and CSS. It does not cache videos, notes or tokens.",
+          ) +
+          '<div class="policy-callout">' +
+          p("<strong>Limited Use:</strong> " + policySentence) +
+          "</div>",
+      ) +
+      section(
+        "2. Types of Google user data",
+        table(
+          ["Data", "Details", "Purpose"],
+          [
+            [
+              "OAuth access token",
+              "Obtained through Google Identity Services",
+              "Calling the Google Drive API",
+            ],
+            [
+              "Metadata of the selected video",
+              "File ID, name, size, MIME type, parent folder ID, creation time and duration",
+              "Display, frame-rate detection and choosing where to save the note file",
+            ],
+            [
+              "Content of the selected video",
+              "Video data",
+              "Playback in your browser and frame-rate detection",
+            ],
+            [
+              "Note files",
+              "Content and metadata of app-created <code>.memo.vtt</code> files",
+              "Saving and loading notes",
+            ],
+            [
+              "App-created folder",
+              "ID of the “FrameStep メモ” folder",
+              "Note storage when saving in the video's folder is not possible",
+            ],
+          ],
+        ) +
+          p(
+            "<strong>Not collected:</strong> email address, name, profile photo, contacts, and any videos or other files you did not select.",
           ),
       ) +
       section(
-        "2. Purpose and sharing",
-        p(
-          "Information is used only for video playback, frame review, file selection, and saving or loading notes. It is not used for advertising, analytics, AI training or other purposes. The operator does not sell or disclose your videos, notes or Google user data to third parties; your requested Drive storage and ordinary external-service requests described below still occur.",
+        "3. Storage location and retention",
+        list(
+          "Access token: kept only in browser memory (page and Service Worker). It is discarded when you close the tab (Service Worker memory when that Worker terminates) and is usable at most until the expiry set by Google.",
+          "Videos: not stored. The browser loads them temporarily during playback.",
+          "Notes: stored in your own Google Drive (until you delete them) or in this browser's localStorage (until you clear site data).",
+          "No Google user data is stored on the operator's servers.",
         ),
       ) +
       section(
-        "3. External services",
+        "4. Data protection",
         list(
-          "Google provides sign-in, Picker and the Drive API. See " +
+          "All communication is encrypted with HTTPS.",
+          "Access tokens are never stored in cookies or localStorage.",
+          "No person, including the operator, views your Google user data.",
+        ),
+      ) +
+      section(
+        "5. Purpose, sharing and transfer",
+        p(
+          "Information is used only for video playback, frame review, file selection, and saving or loading notes. It is not used for advertising, analytics or other purposes. The operator does not sell, disclose or transfer your Google user data, videos or notes to third parties, and does not use Google user data for advertising, creditworthiness determination, or training AI / machine learning models. Your requested Google Drive storage and ordinary external-service requests described below still occur.",
+        ),
+      ) +
+      section(
+        "6. External services",
+        list(
+          "Google provides sign-in, Picker and the Google Drive API. See " +
             external(
               "https://policies.google.com/privacy",
               "Google's Privacy Policy",
             ) +
             ".",
-          "Google Fonts supplies Noto Sans JP and JetBrains Mono to the app. Your IP address and request information are sent to Google when fonts load. See " +
+          "Google Fonts supplies Noto Sans JP, JetBrains Mono and Roboto to the app. Your IP address and request information are sent to Google when fonts load. See " +
             external(
               "https://developers.google.com/fonts/faq/privacy",
               "Google Fonts privacy information",
@@ -329,11 +457,11 @@ export const pages = {
           "The operator implements no analytics, advertising or cookie tracking. Notes use localStorage rather than cookies. Cookies on external services such as Google's sign-in screens are governed by those services' policies.",
         ),
       ) +
-      section("4. Google API Services User Data Policy", p(policySentence)) +
+      section("7. Google API Services User Data Policy", p(policySentence)) +
       section(
-        "5. Deletion and revocation",
+        "8. Deletion and revocation",
         list(
-          "Delete the relevant .memo.vtt file in your Google Drive to remove Drive notes. The × button removes individual notes.",
+          "Delete the relevant .memo.vtt file in your Google Drive to remove notes saved there. The × button removes individual notes.",
           "Delete this site's browser data to remove device notes.",
           "Revoke FrameStep Player at " +
             external(
@@ -341,13 +469,16 @@ export const pages = {
               "Google Account permissions",
             ) +
             ". Revocation does not automatically delete existing note files.",
+          "Deletion requests: the operator does not retain any Google user data, so there is no data for us to delete. Please send any questions to the contact above.",
         ),
       ) +
       section(
-        "6. Revisions and dates",
+        "9. Revisions and dates",
         p(
-          "Changes will be announced on this page and the revision date updated. Established and last revised: " +
+          "Changes will be announced on this page and the revision date updated. Established: " +
             s.establishedDateEn +
+            ". Last revised: " +
+            s.privacyRevisedDateEn +
             ".",
         ),
       ),
@@ -366,7 +497,7 @@ export const pages = {
       section(
         "2. サービス内容",
         p(
-          "Google Driveまたは端末の60fps動画を1フレーム単位で確認し、タイムスタンプ付きメモを付けられるWebアプリです。",
+          "Google ドライブまたは端末の60fps動画を1フレーム単位で確認し、タイムスタンプ付きメモを付けられるWebアプリです。",
         ),
       ) +
       section(
@@ -508,7 +639,7 @@ export const pages = {
           list(
             "React / React DOM：MIT",
             "mp4box：BSD-3-Clause",
-            "Noto Sans JP / JetBrains Mono：SIL Open Font License 1.1（OFL-1.1）",
+            "Noto Sans JP / JetBrains Mono / Roboto：SIL Open Font License 1.1（OFL-1.1）",
           ),
       ) +
       section("お問い合わせ", contact),
@@ -529,7 +660,7 @@ export const pages = {
           list(
             "React / React DOM: MIT",
             "mp4box: BSD-3-Clause",
-            "Noto Sans JP / JetBrains Mono: SIL Open Font License 1.1 (OFL-1.1)",
+            "Noto Sans JP / JetBrains Mono / Roboto: SIL Open Font License 1.1 (OFL-1.1)",
           ),
       ) +
       section("Contact", contactEn),

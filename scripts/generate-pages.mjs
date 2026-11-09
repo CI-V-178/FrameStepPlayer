@@ -4,6 +4,7 @@ import {
   siteLinks,
   socialLinks,
 } from "../src/shared/siteInfo.ts";
+import { driveScope, homeContent } from "../src/shared/homeContent.ts";
 import { pages, mitLicense, contact, contactEn } from "./site-content.mjs";
 const root = new URL("../", import.meta.url);
 const escape = (text) =>
@@ -41,6 +42,10 @@ const footer =
     .join("") +
   "</div><p>" +
   s.operator +
+  '</p><p class="trademark">' +
+  s.trademark +
+  '</p><p class="trademark" lang="en">' +
+  s.trademarkEn +
   "</p></footer>";
 const head = (title, description, path) =>
   '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#101215"><title>' +
@@ -63,8 +68,10 @@ for (const [path, page] of Object.entries(pages)) {
     s.appName +
     " に戻る</a><h1>" +
     page.title +
-    '</h1><p class="date">制定日・最終改定日：' +
-    s.establishedDate +
+    '</h1><p class="date">' +
+    (path === "privacy"
+      ? "制定日：" + s.establishedDate + "　最終改定日：" + s.privacyRevisedDate
+      : "制定日・最終改定日：" + s.establishedDate) +
     "</p><article>" +
     page.ja +
     license +
@@ -76,6 +83,42 @@ for (const [path, page] of Object.entries(pages)) {
     "</body></html>\n";
   await writeFile(new URL(path + ".html", root), html);
 }
+const homeBody = (c, lang) =>
+  "<section><h2>" +
+  c.featuresHeading +
+  "</h2><ul>" +
+  c.features.map((item) => "<li>" + item + "</li>").join("") +
+  '</ul></section><section id="google-user-data' +
+  (lang === "en" ? "-en" : "") +
+  '"><h2>' +
+  c.dataHeading +
+  "</h2><ul><li>" +
+  c.scopeLabel +
+  "<code>" +
+  driveScope +
+  "</code>" +
+  c.scopeNote +
+  "</li><li>" +
+  c.purposeLabel +
+  "<ul>" +
+  c.purposes.map((item) => "<li>" + item + "</li>").join("") +
+  "</ul></li><li>" +
+  c.notAccessed +
+  "</li><li>" +
+  c.flow +
+  "</li></ul><p>" +
+  c.privacyBefore +
+  '<a href="/privacy">' +
+  c.privacyLink +
+  "</a>" +
+  c.privacyAfter +
+  "</p></section><section><h2>" +
+  c.stepsHeading +
+  "</h2><ol>" +
+  c.steps.map((item) => "<li>" + item + "</li>").join("") +
+  '</ol><p><a href="/help">' +
+  c.helpLink +
+  "</a></p></section>";
 await writeFile(
   new URL("index.html", root),
   '<!doctype html>\n<html lang="ja"><head>' +
@@ -83,12 +126,23 @@ await writeFile(
     '<link rel="manifest" href="/manifest.webmanifest"><meta name="google-site-verification" content="%VITE_GOOGLE_SITE_VERIFICATION%"></head><body><div id="root"><main class="document static-home"><h1>' +
     s.appName +
     '</h1><p class="description">' +
+    s.appName +
+    " — " +
     s.description +
-    "</p><p>端末の動画にも対応し、停止位置に50文字以内のメモを残せます。60fpsのmp4 / movに対応しています。</p><p>運営者・連絡先</p>" +
+    "</p>" +
+    homeBody(homeContent.ja, "ja") +
+    "<section><h2>運営者と連絡先</h2>" +
     contact +
-    '<p><a href="/privacy">プライバシーポリシー</a>をご確認ください。動画の再生にはJavaScriptを有効にしてください。</p><section lang="en"><h2>English</h2><p>Review 60fps MP4 / MOV videos from Google Drive or your device one frame at a time and add timestamped notes of up to 50 Unicode code points.</p>' +
+    "</section><p>動画の再生にはJavaScriptを有効にしてください。</p>" +
+    '<section lang="en"><h2>English</h2><p class="description">' +
+    s.appName +
+    " — " +
+    homeContent.en.tagline +
+    "</p>" +
+    homeBody(homeContent.en, "en") +
+    "<section><h2>Operator and contact</h2>" +
     contactEn +
-    '<p>Read our <a href="/privacy">Privacy Policy</a>. Enable JavaScript to use the player.</p></section></main>' +
+    "</section><p>Enable JavaScript to use the player.</p></section></main>" +
     footer +
     '</div><script type="module" src="/src/main.tsx"></script></body></html>\n',
 );
@@ -104,7 +158,7 @@ await writeFile(
 const readme = [
   "# " + s.appName,
   "",
-  "Google Driveや端末の60fps動画を1フレームずつ確認し、タイムスタンプ付きメモを残せる無料のWebアプリです。",
+  "Google ドライブや端末の60fps動画を1フレームずつ確認し、タイムスタンプ付きメモを残せる無料のWebアプリです。",
   "",
   "## 公開 URL",
   "",
@@ -114,7 +168,7 @@ const readme = [
   "",
   "- ±1fの移動、長押しによる連続移動、PCのキー操作",
   "- 50文字以内のタイムスタンプ付きメモ",
-  "- Google DriveへのVTT自動保存、端末ブラウザへの保存、VTT入出力",
+  "- Google ドライブへのVTT自動保存、端末ブラウザへの保存、VTT入出力",
   "",
   "## 対応している動画",
   "",
@@ -122,7 +176,7 @@ const readme = [
   "",
   "## 使い方",
   "",
-  "1. 「Google でログインして Drive から開く」または「端末から開く」で動画を選び、情報を確認して「この動画を開く」を押します。",
+  "1. 「Google でログイン」してから「Google ドライブから開く」、または「端末から開く」で動画を選び、情報を確認して「この動画を開く」を押します。",
   "2. 「−1f」「+1f」をタップしてフレーム移動。0.4秒以上の長押しで連続移動し、離すと止まります。",
   "3. 停止位置でメモを入力し「追加」またはEnter。一覧を選ぶとその位置へ戻り、×で削除できます。",
   "",
@@ -130,8 +184,11 @@ const readme = [
   "",
   "## プライバシー",
   "",
+  "要求するGoogleの権限は `" +
+    driveScope +
+    "`（このアプリで使用する特定のファイルのみ）だけです。<br>",
   "動画・メモ・アクセストークンは運営者のサーバーへ送信しません。<br>",
-  "DriveはブラウザからGoogleへ直接アクセスし、メモは自分のDriveまたは端末のブラウザに保存します。<br>",
+  "Google ドライブにはブラウザからGoogleへ直接アクセスし、メモは自分のGoogle ドライブまたは端末のブラウザに保存します。<br>",
   "Google Fontsへの通信とVercelのアクセスログについては[プライバシーポリシー](" +
     s.siteUrl +
     "/privacy)をご覧ください。",
@@ -156,7 +213,7 @@ const readme = [
   "npm run licenses",
   "~~~",
   "",
-  "テスト動画の再生成は bash Example/MOCK/generate.sh。E2EのDrive通信はモックで検証し、専用サーバーはIPv6ループバックの5174番を使用します。",
+  "テスト動画の再生成は bash Example/MOCK/generate.sh。E2EのGoogle ドライブ通信はモックで検証し、専用サーバーはIPv6ループバックの5174番を使用します。",
   "",
   "公開ページとLICENSE・このREADMEはsrc/shared/siteInfo.tsとscripts/site-content.mjsをもとに、npm run pages（buildとdevの前にも実行）で生成します。生成済みHTMLもコミットし、JavaScriptなしで読めます。第三者通知はnpm run licensesで生成します。",
   "",
@@ -178,6 +235,12 @@ const readme = [
   "- [メール: " + s.email + "](mailto:" + s.email + ")",
   "",
   "運営者：" + s.operator,
+  "",
+  "---",
+  "",
+  s.trademark,
+  "",
+  s.trademarkEn,
   "",
 ].join("\n");
 await writeFile(new URL("README.md", root), readme);

@@ -10,7 +10,13 @@ import {
 import { SaveQueue } from "../features/memo/queue";
 import { FrameController } from "../features/player/controller";
 import { readVideoInfo, require60 } from "../features/fps/detect";
-import { configured, pickVideo, seedToken } from "../features/drive/auth";
+import {
+  accessToken,
+  configured,
+  onToken,
+  pickVideo,
+  seedToken,
+} from "../features/drive/auth";
 import {
   metadata,
   range,
@@ -23,8 +29,10 @@ import {
 import { prepareStream } from "../features/drive/stream";
 import StepButton from "./StepButton";
 import Icon from "./Icon";
+import GoogleSignInButton from "./GoogleSignInButton";
 import { SiteFooter, SiteLinks, SiteMenu } from "../shared/SiteFooter";
 import { siteInfo } from "../shared/siteInfo";
+import { driveScope, homeContent, privacyNotice } from "../shared/homeContent";
 import FileSelectionDialog, {
   type FileSelection,
 } from "../features/selection/FileSelection";
@@ -54,6 +62,8 @@ export default function App() {
     metadataTimer = useRef<ReturnType<typeof setTimeout>>(),
     fallbackBusy = useRef(false);
   const [selection, setSelection] = useState<FileSelection>();
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => onToken(() => setSignedIn(true)), []);
   const [opened, setOpened] = useState<OpenVideo>(),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(""),
@@ -313,6 +323,14 @@ export default function App() {
     if (candidate.source === "local") void openLocal(candidate.file);
     else void openDrive(candidate.file.id, candidate.file);
   }
+  async function signIn() {
+    setError("");
+    try {
+      await accessToken(false, true);
+    } catch {
+      setError("Google ログインできませんでした");
+    }
+  }
   async function chooseDrive() {
     try {
       const id = await pickVideo();
@@ -398,14 +416,23 @@ export default function App() {
         </div>
         <span className="fps">60fps</span>
         <div className="header-actions">
-          <button
-            disabled={driveDisabled}
-            onClick={() => void chooseDrive()}
-            aria-label="Drive から開く"
-          >
-            <Icon kind="folder" />
-            <span>Drive から開く</span>
-          </button>
+          {signedIn ? (
+            <button
+              disabled={driveDisabled}
+              onClick={() => void chooseDrive()}
+              aria-label="Google ドライブから開く"
+            >
+              <Icon kind="folder" />
+              <span>Google ドライブから開く</span>
+            </button>
+          ) : (
+            opened && (
+              <GoogleSignInButton
+                disabled={driveDisabled}
+                onClick={() => void signIn()}
+              />
+            )
+          )}
           <button
             disabled={!!loading}
             className="local-open"
@@ -441,18 +468,29 @@ export default function App() {
             <p className="eyebrow">ひとつのフレームに、ひとつの発見。</p>
             <h1>{siteInfo.appName}</h1>
             <p>
-              Google Drive の 60fps 動画を
+              Google ドライブの 60fps 動画を
               <br className="mobile-break" /> 1 フレームずつ確認できます
             </p>
             <div className="welcome-actions">
-              <button
-                className="primary"
-                disabled={driveDisabled}
-                onClick={() => void chooseDrive()}
-              >
-                <Icon kind="folder" />
-                Google でログインして Drive から開く
-              </button>
+              <p className="privacy-notice" role="note">
+                {privacyNotice}
+                <a href="/privacy">プライバシーポリシー</a>
+              </p>
+              {signedIn ? (
+                <button
+                  className="primary"
+                  disabled={driveDisabled}
+                  onClick={() => void chooseDrive()}
+                >
+                  <Icon kind="folder" />
+                  Google ドライブから開く
+                </button>
+              ) : (
+                <GoogleSignInButton
+                  disabled={driveDisabled}
+                  onClick={() => void signIn()}
+                />
+              )}
               <button
                 disabled={!!loading}
                 onClick={() => fileInput.current?.click()}
@@ -462,6 +500,40 @@ export default function App() {
             </div>
             <p className="welcome-hint">60fps の MP4・MOV に対応</p>
           </main>
+          <section className="home-about" aria-label="アプリについて">
+            <h2>{homeContent.ja.featuresHeading}</h2>
+            <ul>
+              {homeContent.ja.features.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+            <h2>{homeContent.ja.dataHeading}</h2>
+            <ul>
+              <li>
+                {homeContent.ja.scopeLabel}
+                <code>{driveScope}</code>
+                {homeContent.ja.scopeNote}
+              </li>
+              <li>
+                {homeContent.ja.purposeLabel}
+                <ul>
+                  {homeContent.ja.purposes.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </li>
+              <li>{homeContent.ja.notAccessed}</li>
+              <li>{homeContent.ja.flow}</li>
+            </ul>
+            <p>
+              {homeContent.ja.privacyBefore}
+              <a href="/privacy">{homeContent.ja.privacyLink}</a>
+              {homeContent.ja.privacyAfter}
+            </p>
+            <p>
+              <a href="/help">{homeContent.ja.helpLink}</a>
+            </p>
+          </section>
           <SiteFooter />
         </>
       ) : (
@@ -572,7 +644,7 @@ export default function App() {
                       保存に失敗しました［再試行］
                     </button>
                   ) : opened.drive ? (
-                    "Drive に保存済み"
+                    "Google ドライブに保存済み"
                   ) : (
                     "端末に保存済み"
                   )}
@@ -644,7 +716,7 @@ export default function App() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    メモファイルを Drive で開く ↗
+                    メモファイルを Google ドライブで開く ↗
                   </a>
                 ) : (
                   <>
