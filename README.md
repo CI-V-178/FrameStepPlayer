@@ -1,16 +1,16 @@
 # FrameStep Player
 
-Google Driveや端末の60fps動画を1フレームずつ確認し、タイムスタンプ付きメモを残せる無料のWebアプリです。
+Google ドライブや端末の60fps動画を1フレームずつ確認し、タイムスタンプ付きメモを残せる無料のWebアプリです。
 
 ## 公開 URL
 
-[https://frame-step-player.vercel.app](https://frame-step-player.vercel.app)
+[https://frame-step-player.win](https://frame-step-player.win)
 
 ## 主な機能
 
 - ±1fの移動、長押しによる連続移動、PCのキー操作
 - 50文字以内のタイムスタンプ付きメモ
-- Google DriveへのVTT自動保存、端末ブラウザへの保存、VTT入出力
+- Google ドライブへのVTT自動保存、端末ブラウザへの保存、VTT入出力
 
 ## 対応している動画
 
@@ -18,17 +18,18 @@ Google Driveや端末の60fps動画を1フレームずつ確認し、タイム�
 
 ## 使い方
 
-1. 「Google でログインして Drive から開く」または「端末から開く」で動画を選び、情報を確認して「この動画を開く」を押します。
+1. 「Google でログイン」してから「Google ドライブから開く」、または「端末から開く」で動画を選び、情報を確認して「この動画を開く」を押します。
 2. 「−1f」「+1f」をタップしてフレーム移動。0.4秒以上の長押しで連続移動し、離すと止まります。
 3. 停止位置でメモを入力し「追加」またはEnter。一覧を選ぶとその位置へ戻り、×で削除できます。
 
-詳しくは[使い方](https://frame-step-player.vercel.app/help)をご覧ください。
+詳しくは[使い方](https://frame-step-player.win/help)をご覧ください。
 
 ## プライバシー
 
+要求するGoogleの権限は `https://www.googleapis.com/auth/drive.file`（このアプリで使用する特定のファイルのみ）だけです。<br>
 動画・メモ・アクセストークンは運営者のサーバーへ送信しません。<br>
-DriveはブラウザからGoogleへ直接アクセスし、メモは自分のDriveまたは端末のブラウザに保存します。<br>
-Google Fontsへの通信とVercelのアクセスログについては[プライバシーポリシー](https://frame-step-player.vercel.app/privacy)をご覧ください。
+Google ドライブにはブラウザからGoogleへ直接アクセスし、メモは自分のGoogle ドライブまたは端末のブラウザに保存します。<br>
+Google Fontsへの通信とVercelのアクセスログについては[プライバシーポリシー](https://frame-step-player.win/privacy)をご覧ください。
 
 ## 開発方法
 
@@ -50,7 +51,7 @@ npm run test:e2e
 npm run licenses
 ~~~
 
-テスト動画の再生成は bash Example/MOCK/generate.sh。E2EのDrive通信はモックで検証し、専用サーバーはIPv6ループバックの5174番を使用します。
+テスト動画の再生成は bash Example/MOCK/generate.sh。E2EのGoogle ドライブ通信はモックで検証し、専用サーバーはIPv6ループバックの5174番を使用します。
 
 公開ページとLICENSE・このREADMEはsrc/shared/siteInfo.tsとscripts/site-content.mjsをもとに、npm run pages（buildとdevの前にも実行）で生成します。生成済みHTMLもコミットし、JavaScriptなしで読めます。第三者通知はnpm run licensesで生成します。
 
@@ -71,3 +72,9 @@ MIT。本体の[LICENSE](LICENSE)と、依存パッケージ・フォントの[T
 - [メール: carrotinaba@gmail.com](mailto:carrotinaba@gmail.com)
 
 運営者：CI-V-178（個人開発）
+
+---
+
+Google、Google ドライブ は Google LLC の商標です。FrameStep Player は Google が提供・承認しているものではありません。
+
+Google and Google Drive are trademarks of Google LLC. FrameStep Player is not affiliated with or endorsed by Google.

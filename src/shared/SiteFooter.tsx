@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { siteInfo, siteLinks, socialLinks } from "./siteInfo";
 
-export function SiteLinks({ className = "" }: { className?: string }) {
+export function SiteLinks({
+  className = "",
+  privacyFirst = false,
+}: {
+  className?: string;
+  privacyFirst?: boolean;
+}) {
+  const links = privacyFirst
+    ? [
+        ...siteLinks.filter((link) => link.href === "/privacy"),
+        ...siteLinks.filter((link) => link.href !== "/privacy"),
+      ]
+    : siteLinks;
   return (
     <nav className={className} aria-label="公開情報">
-      {siteLinks.map((link, i) => (
+      {links.map((link, i) => (
         <span key={link.href}>
           {i > 0 && (
             <span className="link-separator" aria-hidden="true">
@@ -45,6 +57,10 @@ export function SiteFooter() {
         ))}
       </div>
       <p>{siteInfo.operator}</p>
+      <p className="trademark">{siteInfo.trademark}</p>
+      <p className="trademark" lang="en">
+        {siteInfo.trademarkEn}
+      </p>
     </footer>
   );
 }
@@ -96,7 +112,7 @@ export function SiteMenu() {
       </button>
       {open && (
         <div id="site-menu-links">
-          <SiteLinks />
+          <SiteLinks privacyFirst />
           {socialLinks.map((link) => (
             <a
               key={link.href}

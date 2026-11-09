@@ -1,17 +1,24 @@
 export const siteInfo = Object.freeze({
   appName: "FrameStep Player",
-  description: "Google Drive の 60fps 動画を 1 フレームずつ確認できます",
+  description:
+    "Google ドライブの 60fps 動画を 1 フレームずつ確認できる無料の Web アプリ",
   operator: "CI-V-178（個人開発）",
   copyrightHolder: "CI-V-178",
   email: "carrotinaba@gmail.com",
   xUrl: "https://x.com/carrot_inaba",
   xLabel: "@carrot_inaba",
   githubUrl: "https://github.com/CI-V-178/FrameStepPlayer",
-  siteUrl: "https://frame-step-player.vercel.app",
+  siteUrl: "https://frame-step-player.win",
   license: "MIT",
   year: 2026,
   establishedDate: "2026年11月2日",
   establishedDateEn: "November 2, 2026",
+  privacyRevisedDate: "2026年11月9日",
+  privacyRevisedDateEn: "November 9, 2026",
+  trademark:
+    "Google、Google ドライブ は Google LLC の商標です。FrameStep Player は Google が提供・承認しているものではありません。",
+  trademarkEn:
+    "Google and Google Drive are trademarks of Google LLC. FrameStep Player is not affiliated with or endorsed by Google.",
 });
 export const siteLinks = [
   { label: "使い方", href: "/help" },

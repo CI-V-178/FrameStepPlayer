@@ -41,6 +41,7 @@ for (const [key, pkg] of Object.entries(packages).sort(([a], [b]) =>
 for (const [name, file] of [
   ["Noto Sans JP", "NotoSansJP-OFL.txt"],
   ["JetBrains Mono", "JetBrainsMono-OFL.txt"],
+  ["Roboto", "Roboto-OFL.txt"],
 ]) {
   const text = (
     await readFile(new URL("licenses/" + file, import.meta.url), "utf8")
